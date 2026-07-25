@@ -8,7 +8,7 @@ import pandas as pd
 import streamlit as st
 
 from teetimer import AREAS, COURSES, scrape
-from teetimer import ui
+from teetimer import homescreen, ui
 from teetimer.courses import BY_KEY
 from teetimer.models import rate_holes
 
@@ -127,6 +127,7 @@ with st.sidebar:
 # Main
 # --------------------------------------------------------------------------
 st.markdown(ui.css(is_dark()), unsafe_allow_html=True)
+homescreen.apply("Tee Timer")
 
 st.title("⛳ Tee Timer")
 st.caption("Live availability and prices, straight from each club's own booking "

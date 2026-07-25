@@ -16,19 +16,22 @@ Deploy on Streamlit Community Cloud by pointing a new app at this repo with
 
 ## How it works
 
-There is no aggregator behind this. Two platforms cover almost the whole
-corridor, plus one club that runs its own engine — the app talks to each
-directly:
+There is no aggregator behind this. The corridor's clubs are spread across four
+booking systems, and the app talks to each one directly:
 
 | Platform | Clubs | Endpoint |
 | --- | --- | --- |
-| **Golfmanager** | 13 | `GET https://<tenant>.golfmanager.com/ebookings/searchAvailability.api` |
+| **Golfmanager (classic)** | 13 | `GET https://<tenant>.golfmanager.com/ebookings/searchAvailability.api` |
+| **Golfmanager (hosted)** | 2 | `GET https://eu.golfmanager.com/<tenant>/consumer/availability.json` |
 | **TeeOne** | 21 | `POST https://api.teeone.golf/.../Api/Disponibilidad/ObtenerDisponibilidadDia` |
-| **Río Real** | 1 | `GET https://reservas-golf.rioreal.com/reserva/fecha:YYYY-MM-DD` (server-rendered) |
+| **Río Real** | 1 | `GET https://reservas-golf.rioreal.com/reserva/fecha:YYYY-MM-DD` |
+| **MasterGolf** | 1 | `POST https://reservas72.miraflores-golf.com/.../selnav.php` |
 
-These are the same calls the clubs' own booking widgets make, so prices are the
-live online rate rather than a rack card. TeeOne needs a per-club token, which
-the adapter lifts from the booking page once per session and caches.
+These are the same calls the clubs' own pages make, so prices are the live
+online rate rather than a rack card. Two need a handshake first: TeeOne mints a
+per-club token on its booking page, and the hosted Golfmanager front-end embeds
+a short-lived `rid` token that must be echoed back as a request header (without
+it every call is a 401).
 
 ```
 teetimer/
@@ -36,16 +39,21 @@ teetimer/
   models.py           Course / TeeTime / rate classification
   scraper.py          concurrent fan-out, per-course error isolation
   ui.py               responsive results list (CSS + HTML)
+  homescreen.py       iOS home-screen icon + web-app tags
   adapters/
-    golfmanager.py
+    golfmanager.py    classic + hosted front-ends
     teeone.py
     rioreal.py
+    mastergolf.py
 streamlit_app.py      the UI
+assets/icon-180.png   home-screen icon (regenerate: python -m tools.make_icon)
 tools/
   smoke.py            hit every course, report coverage
   discover.py         re-verify the registry against the live engines
+  make_icon.py        draw assets/icon-180.png
   test_filters.py     rate-name -> hole-count classification tests
   test_render.py      results-list rendering checks
+  test_mastergolf.py  session/cap workaround checks for Miraflores
 ```
 
 ## Details worth knowing
@@ -54,7 +62,8 @@ tools/
   down so every row is comparable.
 - **Holes are read from the rate, not the course.** An 18-hole tee sheet
   routinely sells 9-hole green fees; filtering on the course alone would leak
-  them into an 18-hole search.
+  them into an 18-hole search. Clock digits in a rate name are ignored so
+  "time band 09:00–10:50" isn't mistaken for a 9-hole round.
 - **Junior / member / pro rates are hidden by default.** The engines list them
   but a visiting adult can't book them, and they otherwise dominate "cheapest".
 - **A club that is closed, full or has no rate sheet published is reported as
@@ -62,19 +71,37 @@ tools/
 - **Río Real sells time bands, not slots.** Its engine prices a window
   ("08:00–09:50 → €141") and settles the exact tee time at the next step, so its
   rows are timed at the band's opening and labelled `time band HH:MM–HH:MM`.
-  Its sheet also doesn't publish per-band remaining capacity, so the player
-  filter can't narrow it.
+  Its sheet doesn't publish per-band capacity, so the player filter can't
+  narrow it.
+- **Miraflores is the slow one.** Its PHP engine caches the first search per
+  session and hard-caps results at 10 rows with no pager, so the adapter uses a
+  throwaway session per query and slices the time window, splitting any slice
+  that comes back capped. That costs a handful of requests instead of one and
+  adds a few seconds to a whole-corridor search.
+- **R.C.G. Sotogrande is members-only.** Its engine is live and answers
+  correctly, but publishes no visitor green fees, so it always reports nothing
+  available. It's registered so it appears the day that changes.
 - Results are cached for 3 minutes so re-filtering doesn't re-hit every engine.
+
+## Home-screen icon
+
+Saved to an iPhone home screen, a Streamlit app shows a blank tile: iOS ignores
+the tab favicon and wants `<link rel="apple-touch-icon">`, falling back to a
+screenshot when it can't find one. `teetimer/homescreen.py` injects that tag
+(plus the web-app title and status-bar style) into the parent document from a
+components iframe, with the PNG inlined as a data URI. iOS caches the icon, so
+an existing shortcut has to be deleted and re-added to pick it up.
 
 ## Coverage
 
-35 clubs / 57 bookable routes across Sotogrande & San Roque, Casares, Estepona,
+38 clubs / 60 bookable routes across Sotogrande & San Roque, Casares, Estepona,
 Benahavís, San Pedro & Nueva Andalucía, Marbella and Mijas/Fuengirola, plus
 Alhaurín and Lauro just inland (off by default).
 
-Known gaps — these clubs are in the corridor but sell green fees through
-channels with no open availability feed: Miraflores, La Dama de Noche,
-Greenlife, Casares Costa, Monte Paraíso and Real Club de Golf Sotogrande.
+Known gaps — in the corridor but with no open availability feed: La Dama de
+Noche, Casares Costa and Monte Paraíso.
 
-Clubs change platform occasionally. Run `python -m tools.discover` to print what
-each engine currently reports and reconcile it with `teetimer/courses.py`.
+Clubs change platform occasionally — Río Real left TeeOne, and Santa Clara
+Marbella and Granada share a name but not a tenant. Run
+`python -m tools.discover` to print what each engine currently reports and
+reconcile it with `teetimer/courses.py`.

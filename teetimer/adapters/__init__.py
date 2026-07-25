@@ -1,5 +1,5 @@
 """Per-platform booking-engine adapters."""
 
-from . import golfmanager, rioreal, teeone
+from . import golfmanager, mastergolf, rioreal, teeone
 
-__all__ = ["golfmanager", "rioreal", "teeone"]
+__all__ = ["golfmanager", "mastergolf", "rioreal", "teeone"]

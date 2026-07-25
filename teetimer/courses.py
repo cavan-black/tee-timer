@@ -41,6 +41,10 @@ COURSES: list[Course] = [
     _gm("The Alto Club (Almenara)", "", "Sotogrande / San Roque", 18, "almenara", 1),
     _gm("The San Roque Club", "Old Course", "Sotogrande / San Roque", 18, "sanroqueclub", 1),
     _t1("La Cañada Club de Golf", "", "Sotogrande / San Roque", 18, "canada", 151),
+    # Members' club: its engine is live but publishes no visitor green fees.
+    Course(club="R.C.G. Sotogrande", course="", area="Sotogrande / San Roque",
+           holes=18, platform="golfmanager-hosted", tenant="golfsotogrande",
+           resource_type=1),
     _t1("La Hacienda (Alcaidesa)", "Links", "Sotogrande / San Roque", 18, "lahaciendagolf", 141),
     _t1("La Hacienda (Alcaidesa)", "Heathland", "Sotogrande / San Roque", 18, "lahaciendagolf", 142),
     _t1("La Hacienda (Alcaidesa)", "Links 9", "Sotogrande / San Roque", 9, "lahaciendagolf", 260),
@@ -91,6 +95,8 @@ COURSES: list[Course] = [
     _t1("Marbella Golf & Country Club", "Tee 1", "Marbella", 18, "marbella", 77),
     _t1("Marbella Golf & Country Club", "Tee 10 (9)", "Marbella", 9, "marbella", 571),
     _t1("Santa María Golf Club", "", "Marbella", 18, "santamaria", 393),
+    Course(club="Greenlife Golf Marbella", course="", area="Marbella", holes=9,
+           platform="golfmanager-hosted", tenant="greenlife", resource_type=1),
 
     # --- Mijas / Fuengirola --------------------------------------------------
     _gm("La Cala Resort", "Campo América", "Mijas / Fuengirola", 18, "lacala", 1, 1),
@@ -104,6 +110,8 @@ COURSES: list[Course] = [
     _t1("Santana Golf", "", "Mijas / Fuengirola", 18, "santana", 60),
     _t1("Mijas Golf Club", "Los Lagos", "Mijas / Fuengirola", 18, "mijas", 58),
     _t1("Mijas Golf Club", "Los Olivos", "Mijas / Fuengirola", 18, "mijas", 59),
+    Course(club="Miraflores Golf", course="", area="Mijas / Fuengirola", holes=18,
+           platform="mastergolf", tenant="miraflores"),
     _t1("La Noria Golf", "", "Mijas / Fuengirola", 18, "noria", 155),
     _t1("La Noria Golf", "9 holes", "Mijas / Fuengirola", 9, "noria", 156),
 

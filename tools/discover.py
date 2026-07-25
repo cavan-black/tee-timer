@@ -52,10 +52,30 @@ def rioreal_bands(_: str) -> str:
     return f"rioreal — Río Real Golf (time bands, {day})\n{lines}"
 
 
+def hosted_tenant(tenant: str) -> str:
+    """eu.golfmanager.com/<tenant> — areas come from consumer/home.json."""
+    from teetimer.adapters.golfmanager import HOSTED, _hosted_session
+
+    s = _hosted_session(tenant)
+    home = s.get(f"{HOSTED}/{tenant}/consumer/home.json", timeout=25).json()
+    areas = ", ".join(f"{i['id']}={i['label']}" for i in home.get("items") or [])
+    return f"golfmanager-hosted/{tenant}\n    areas: {areas}"
+
+
+def mastergolf_club(_: str) -> str:
+    from datetime import date, timedelta
+
+    from teetimer.adapters import mastergolf
+
+    return "mastergolf/miraflores\n    " + mastergolf.probe(date.today() + timedelta(days=7))
+
+
 CHECKERS = {
     "golfmanager": golfmanager_tenant,
+    "golfmanager-hosted": hosted_tenant,
     "teeone": teeone_club,
     "rioreal": rioreal_bands,
+    "mastergolf": mastergolf_club,
 }
 
 
