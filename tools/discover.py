@@ -39,10 +39,30 @@ def teeone_club(slug: str) -> str:
     return f"teeone/{slug} — {club}\n{lines}"
 
 
+def rioreal_bands(_: str) -> str:
+    from datetime import date, timedelta
+
+    from teetimer.adapters import rioreal
+    from teetimer.courses import COURSES as _C
+
+    course = next(c for c in _C if c.platform == "rioreal")
+    day = date.today() + timedelta(days=7)
+    bands = rioreal.fetch(course, day)
+    lines = "\n".join(f"    {b.tee_off:%H:%M}  €{b.price:.2f}  {b.rate_name}" for b in bands)
+    return f"rioreal — Río Real Golf (time bands, {day})\n{lines}"
+
+
+CHECKERS = {
+    "golfmanager": golfmanager_tenant,
+    "teeone": teeone_club,
+    "rioreal": rioreal_bands,
+}
+
+
 def check(item: tuple[str, str]) -> str:
     platform, tenant = item
     try:
-        return golfmanager_tenant(tenant) if platform == "golfmanager" else teeone_club(tenant)
+        return CHECKERS[platform](tenant)
     except Exception as exc:
         return f"{platform}/{tenant}\n    FAILED: {type(exc).__name__}: {exc}"
 

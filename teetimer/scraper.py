@@ -6,7 +6,7 @@ from datetime import date
 
 import requests
 
-from .adapters import golfmanager, teeone
+from .adapters import golfmanager, rioreal, teeone
 from .models import Course, CourseResult, NoAvailability, TeeTime, in_window
 
 MAX_WORKERS = 12
@@ -31,6 +31,8 @@ def scrape_course(
             times = golfmanager.fetch(course, day, session=session)
         elif course.platform == "teeone":
             times = teeone.fetch(course, day, window=window, players=-1, session=session)
+        elif course.platform == "rioreal":
+            times = rioreal.fetch(course, day, session=session)
         else:
             raise RuntimeError(f"unknown platform {course.platform!r}")
     except NoAvailability as exc:

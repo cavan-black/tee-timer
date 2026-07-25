@@ -85,6 +85,8 @@ COURSES: list[Course] = [
     # NB: the golfmanager tenant "santaclara" is Santa Clara *Granada* -- the
     # Marbella club is a separate TeeOne tenant.
     _t1("Santa Clara Golf Marbella", "", "Marbella", 18, "santaclaramarbella", 1),
+    Course(club="Río Real Golf", course="", area="Marbella", holes=18,
+           platform="rioreal", tenant="rioreal"),
     _gm("Cabopino Golf", "", "Marbella", 18, "cabopino", 1),
     _t1("Marbella Golf & Country Club", "Tee 1", "Marbella", 18, "marbella", 77),
     _t1("Marbella Golf & Country Club", "Tee 10 (9)", "Marbella", 9, "marbella", 571),

@@ -70,15 +70,21 @@ _NINE = re.compile(r"\b(9\s*(h|holes?|hoyos|löcher|trous)?|nine|twilight\s*9)\b
 _EIGHTEEN = re.compile(r"\b(18\s*(h|holes?|hoyos)?|eighteen)\b", re.I)
 
 
+_CLOCK = re.compile(r"\b\d{1,2}[:.]\d{2}\b")
+
+
 def rate_holes(rate_name: str, course_holes: int) -> int:
     """How many holes a rate actually buys.
 
     An 18-hole course routinely sells 9-hole green fees off the same tee
     sheet, so the course's own hole count is only a fallback.
     """
-    if _EIGHTEEN.search(rate_name):
+    # Some rates carry a clock time ("time band 09:00-10:50"); those digits
+    # must not be read as a hole count.
+    name = _CLOCK.sub(" ", rate_name)
+    if _EIGHTEEN.search(name):
         return 18
-    if _NINE.search(rate_name):
+    if _NINE.search(name):
         return 9
     return course_holes
 

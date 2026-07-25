@@ -20,6 +20,10 @@ CASES = [
     ("9 HOLES LINKS + SHARED BUGGY", 9, 9), ("Green fee", 18, 18),
     ("Green fee", 9, 9), ("2 GREEN FEES + BUGGY", 18, 18),
     ("GREEN-FEE EARLY BIRD - LOS LAGOS", 18, 18), ("TEE VERANO 9 HOYOS", 18, 9),
+    # Río Real prices time bands; the clock digits must not read as holes.
+    ("Promo 1 · time band 09:00–10:50", 18, 18),
+    ("Twilight · time band 14:00–18:00", 18, 18),
+    ("Early Bird · time band 9:00–9:50", 18, 18),
 ]
 
 failed = 0
