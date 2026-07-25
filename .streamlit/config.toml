@@ -1,0 +1,10 @@
+[theme]
+base = "dark"
+primaryColor = "#4ade80"
+
+[server]
+# Course pages are the only outbound traffic; nothing is uploaded.
+maxUploadSize = 1
+
+[browser]
+gatherUsageStats = false
