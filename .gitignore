@@ -17,3 +17,7 @@ mobile/.env
 
 # vercel
 .vercel
+
+# regenerable review artefacts (python -m tools.contact_sheet)
+assets/contact-sheet-*.png
+assets/overrides-check.png

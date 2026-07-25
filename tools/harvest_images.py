@@ -91,49 +91,79 @@ def from_site(tenant: str) -> str | None:
     match = _META.search(html) or _META_REV.search(html)
     if not match:
         return None
-    # Plenty of sites point og:image at a logo or a "dummy" placeholder; those
-    # look worse in a card than the generated artwork does.
-    if _JUNK.search(match.group(1)):
+    # og:image is whatever the club wants in a link preview -- often a logo, a
+    # placeholder, the hotel, or a drawn course map. None of those are a photo
+    # of the golf course, which is the only thing we want here.
+    candidate = match.group(1)
+    if _JUNK.search(candidate) or _NOT_COURSE.search(candidate) or _MAP.search(candidate):
         return None
-    return _absolute(match.group(1), base)
+    return _absolute(candidate, base)
 
 
-# Most of these club sites are WordPress builds with no og:image at all, so
-# fall back to the largest plausible photo on the home page.
+# Most of these club sites are WordPress builds with no og:image, so photos are
+# pulled from the page. The goal is specifically a picture OF THE GOLF COURSE --
+# not the clubhouse, the hotel, a wedding, or a drawn hole-by-hole map.
 _IMG = re.compile(r'(?:<img[^>]+(?:data-src|data-lazy-src|src)|background-image\s*:\s*url\()'
                   r'\s*=?\s*["\']?([^"\'\s)>]+\.(?:jpe?g|png|webp))', re.I)
 _JUNK = re.compile(r"(logo|icon|favicon|sprite|avatar|badge|flag|bandera|placeholder|"
                    r"cookie|whatsapp|arrow|bullet|spinner|loader|pixel|blank|thumb|"
                    r"dummy|cgi-sys|404|coming-soon|default|no-image|ticket|banner-)", re.I)
+
+# Not the course, however pretty: buildings, rooms, food, events, people.
+_NOT_COURSE = re.compile(
+    r"(hotel|room|suite|habitacion|spa|pool|piscina|restaurant|restaurante|bar\b|menu|"
+    r"food|comida|wedding|boda|event|evento|gym|tennis|padel|villa|apartment|"
+    r"apartamento|real-estate|inmobiliaria|shop|tienda|academy|academia|buggy|"
+    r"trophy|team|staff|equipo|award|premio|news|noticia|clubhouse|casa-club|"
+    r"reception|lobby|terrace|terraza|kids|junior|christmas|navidad|"
+    # people and history, not turf: club sites love a designer portrait
+    r"design|desiged|history|historia|arquitect|portrait|retrato|swing|player|jugador|"
+    r"seve|ballesteros|profile|perfil|people|persona|lesson|clase|coach|pro-shop|"
+    # a screenshot of the site itself, or generic marketing furniture
+    r"screenshot|captura|home_|homepage|web-|mockup|slide-?\d+$)", re.I)
+
+# Drawn layouts and yardage charts -- accurate, but not photography.
+_MAP = re.compile(r"(map|mapa|plano|layout|yardage|scorecard|tarjeta|diagram|croquis|"
+                  r"street|google|satellite|recorrido-plano)", re.I)
+
+# Positive signals that this really is the playing surface.
+_COURSE = re.compile(r"(hoyo|hole|campo|course|fairway|green(?!life)|tee\b|links|"
+                     r"aerial|aerea|panoram|aerial|bunker|putting|golf-course|"
+                     r"campo-de-golf|el-campo|18|par-?[345])", re.I)
+
 _WIDTH = re.compile(r"(\d{3,4})x(\d{3,4})")
+
+# Pages most likely to be wall-to-wall course photography.
+_COURSE_PAGES = ("el-campo", "the-course", "campo", "course", "golf-course",
+                 "en/the-course", "es/el-campo", "campo-de-golf", "our-course",
+                 "the-golf-course", "hoyos", "holes", "galeria", "gallery")
 
 
 def _score(url: str) -> int:
-    """Prefer big, photographic, hero-ish images."""
+    """Rank candidates by how likely they are to be a photo of the course."""
+    if _MAP.search(url) or _NOT_COURSE.search(url):
+        return -1
     score = 0
     dims = _WIDTH.search(url)
     if dims:
         w, h = int(dims.group(1)), int(dims.group(2))
-        if w < 500 or h < 260:
+        if w < 640 or h < 320:
             return -1
-        score += min(w, 2400) // 100
-    if re.search(r"(hero|slider|banner|header|cover|campo|course|hole|hoyo|green|aerial)", url, re.I):
-        score += 12
+        if w < h:
+            return -1               # portrait crops are almost never the course
+        score += min(w, 2400) // 120
+    if _COURSE.search(url):
+        score += 20
+    if re.search(r"(hero|slider|banner|header|cover|home)", url, re.I):
+        score += 6
     if "/uploads/" in url or "/media/" in url:
-        score += 4
+        score += 3
     if url.lower().endswith(".png"):
-        score -= 3          # usually graphics rather than photography
+        score -= 6                  # usually graphics, maps or logos
     return score
 
 
-def from_page_hero(tenant: str) -> str | None:
-    base = SITES.get(tenant)
-    if not base:
-        return None
-    try:
-        html = _get(base)
-    except Exception:
-        return None
+def _candidates(html: str, base: str) -> list[tuple[int, str]]:
     ranked = []
     for raw in dict.fromkeys(_IMG.findall(html)):
         if _JUNK.search(raw):
@@ -143,7 +173,35 @@ def from_page_hero(tenant: str) -> str | None:
         if s >= 0:
             ranked.append((s, url))
     ranked.sort(reverse=True)
-    for _, url in ranked[:6]:
+    return ranked
+
+
+def from_page_hero(tenant: str) -> str | None:
+    base = SITES.get(tenant)
+    if not base:
+        return None
+
+    ranked: list[tuple[int, str]] = []
+    # A dedicated course page beats the home page, which is usually a mix of
+    # clubhouse, restaurant and property marketing.
+    for path in ("", *_COURSE_PAGES):
+        try:
+            html = _get(f"{base.rstrip('/')}/{path}" if path else base)
+        except Exception:
+            continue
+        bonus = 0 if not path else 25
+        ranked += [(s + bonus, u) for s, u in _candidates(html, base)]
+        if bonus and ranked:
+            break   # found a real course page; its photos are good enough
+
+    ranked.sort(reverse=True)
+    seen = set()
+    for _, url in ranked:
+        if url in seen or _rejected(url):
+            continue
+        seen.add(url)
+        if len(seen) > 8:
+            break
         if verify(url):
             return url
     return None
@@ -180,12 +238,76 @@ def verify(url: str) -> bool:
         return False
 
 
+# Hand-checked, for clubs where nothing on the site is machine-identifiable as
+# the course. Every entry here has been looked at, not just filename-matched.
+OVERRIDES: dict[str, str] = {
+    "lareserva": "https://www.lareservaclubsotogrande.com/uploads_wp/uploads/2023/11/campo-golf.jpg",
+    "valleromano": "https://valleromanogolf.com/wp-content/uploads/2026/06/"
+                   "Hoyo-3-Valle-Romano-Golf-Resort-Estepona-Costa-del-Sol-1-2.jpg",
+    "lacala": "https://www.lacala.com/wp-content/uploads/2025/01/"
+              "GREEN_11TH_EUROPA_PAR_5-Custom-864x517.jpg",
+    "brisas": "https://realclubdegolflasbrisas.com/wp-content/uploads/2022/03/RCGB-HOME-2.jpg",
+    "arqueros": "https://www.losarquerosgolf.com/wp-content/uploads/revslider/rsl11/lag-slider-5.jpg",
+    "santaclaramarbella": "https://santaclaragolfmarbella.com/wp-content/uploads/2025/01/"
+                          "santaclara_home_bg2.jpg",
+    # Miraflores is deliberately absent: its Wix site renders the gallery in
+    # JavaScript, so nothing reachable statically is actually the course --
+    # every candidate was a screenshot, a group photo, or a portrait. It gets
+    # generated artwork instead of a wrong photograph.
+}
+
+# Reviewed via `python -m tools.contact_sheet` and rejected on sight: a drawn
+# course map, the Ronda bridge, a Seve Ballesteros portrait, a screenshot of
+# the club's own website, a golfer mid-swing, and a valley panorama.
+REJECTED: set[str] = {
+    "https://azatagolf.com/wp-content/uploads/2026/04/azata-golf-campo-imagen.png",
+    "https://www.lareservaclubsotogrande.com/uploads_wp/uploads/2023/11/"
+    "image-2018-12-13-4-e1708337767816.jpg",
+    "https://www.losarquerosgolf.com/wp-content/uploads/2015/05/Golf-Designer-history.jpg",
+    "https://www.losarquerosgolf.com/wp-content/uploads/2019/03/"
+    "first-golf-course-desiged-by-2.png",
+    "https://valleromanogolf.com/wp-content/uploads/2025/08/"
+    "Valle-Romano-Golf-a-Must-Play-Course-on-the-Costa-del-Sol-3-1-768x512.webp",
+    "https://realclubdegolflasbrisas.com/wp-content/uploads/2016/06/the-course-about.jpg",
+    # resort/real-estate aerial rather than the playing surface
+    "https://www.lacala.com/wp-content/uploads/2025/01/Sunrise_LCR-Custom-1024x614.jpg",
+    # sponsors' backdrop group photo
+    "https://santaclaragolfmarbella.com/wp-content/uploads/2026/06/schusterandfriends1.jpg",
+}
+
+# Everything Miraflores serves statically from Wix is a screenshot of its own
+# home page, a group photo, or a portrait -- never the course. Size-mangled
+# Wix paths defeat stem matching, so block the whole media prefix.
+REJECTED_HOSTS_PREFIX = ("https://static.wixstatic.com/media/662272_",
+                         "https://static.wixstatic.com/media/f305a5_",
+                         "https://static.wixstatic.com/media/b3b36a_")
+
+
+def _stem(url: str) -> str:
+    """Drop the query string, any WordPress -WxH suffix, and the extension, so
+    one rejection covers every rendition of the same picture."""
+    path = url.split("?")[0]
+    path = re.sub(r"-\d{2,4}x\d{2,4}(?=\.\w+$)", "", path)
+    return re.sub(r"\.\w+$", "", path)
+
+
+_REJECTED_STEMS = {_stem(u) for u in REJECTED}
+
+
+def _rejected(url: str) -> bool:
+    return (_stem(url) in _REJECTED_STEMS
+            or url.startswith(REJECTED_HOSTS_PREFIX))
+
+
 def resolve(tenant: str) -> tuple[str, str | None, str]:
+    if tenant in OVERRIDES:
+        url = OVERRIDES[tenant]
+        return tenant, (url if verify(url) else None), "override"
     for name, fn in (("engine", from_hosted_engine),
                      ("og:image", from_site),
                      ("hero", from_page_hero)):
         url = fn(tenant)
-        if url and verify(url):
+        if url and not _rejected(url) and verify(url):
             return tenant, url, name
     return tenant, None, "none"
 

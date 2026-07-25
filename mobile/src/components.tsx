@@ -155,6 +155,52 @@ export function TeeTimeRow({ t, onPress }: { t: TeeTime; onPress: () => void }) 
   );
 }
 
+/** Dense row for the table view: scan a lot of tee times quickly. */
+export function TableRow({
+  t,
+  onPress,
+  showCourse = true,
+}: {
+  t: TeeTime;
+  onPress: () => void;
+  showCourse?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [s.tRow, pressed && { backgroundColor: c.surfaceHi }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${t.time}, ${t.label}, €${t.price}`}
+    >
+      <Text style={s.tTime}>{t.time}</Text>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        {showCourse && (
+          <Text style={s.tClub} numberOfLines={1}>
+            {t.label}
+          </Text>
+        )}
+        <Text style={s.tRate} numberOfLines={1}>
+          {t.rate}
+        </Text>
+      </View>
+      <Text style={s.tSpaces}>{t.spaces}p</Text>
+      <Text style={s.tPrice}>€{t.price.toFixed(0)}</Text>
+    </Pressable>
+  );
+}
+
+/** Column captions for the table view. */
+export function TableHead() {
+  return (
+    <View style={s.tHead}>
+      <Text style={[s.tHeadCell, { width: 52 }]}>TEE</Text>
+      <Text style={[s.tHeadCell, { flex: 1 }]}>COURSE</Text>
+      <Text style={[s.tHeadCell, { width: 34, textAlign: 'right' }]}>MAX</Text>
+      <Text style={[s.tHeadCell, { width: 56, textAlign: 'right' }]}>PRICE</Text>
+    </View>
+  );
+}
+
 export function Empty({ title, body }: { title: string; body: string }) {
   return (
     <View style={s.empty}>
@@ -201,6 +247,40 @@ const s = StyleSheet.create({
   },
   rowTitle: { ...theme.font.body, color: c.text },
   metaRow: { flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' },
+  tHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space(2),
+    paddingHorizontal: theme.space(4),
+    paddingBottom: 6,
+  },
+  tHeadCell: { ...theme.font.caption, fontSize: 10, color: c.faint },
+  tRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space(2),
+    paddingVertical: 10,
+    paddingHorizontal: theme.space(4),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.line,
+  },
+  tTime: {
+    ...theme.font.body,
+    color: c.text,
+    width: 52,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+  },
+  tClub: { ...theme.font.label, color: c.text },
+  tRate: { ...theme.font.caption, fontWeight: '500', letterSpacing: 0, color: c.muted, marginTop: 1 },
+  tSpaces: { ...theme.font.caption, color: c.faint, width: 34, textAlign: 'right' },
+  tPrice: {
+    ...theme.font.label,
+    color: c.accent,
+    width: 56,
+    textAlign: 'right',
+    fontVariant: ['tabular-nums'],
+  },
   empty: { padding: theme.space(8), alignItems: 'center', gap: theme.space(2) },
   emptyTitle: { ...theme.font.title, color: c.text, textAlign: 'center' },
   emptyBody: { ...theme.font.body, color: c.muted, textAlign: 'center', lineHeight: 21 },

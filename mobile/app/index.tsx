@@ -1,35 +1,55 @@
-/** Search + results. One screen: set the day and time, see the courses. */
+/** Search + results. Course cards you flick through, or a dense table. */
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
 import {
   ActivityIndicator,
+  FlatList,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
-  SectionList,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { cachedSearch, search, type Holes, type SearchResult, type TeeTime, type Window } from '../src/api';
-import { Chip, CourseArt, Empty, Price } from '../src/components';
+import {
+  cachedSearch,
+  search,
+  type Holes,
+  type SearchResult,
+  type TeeTime,
+  type Window,
+} from '../src/api';
+import { Chip, CourseArt, Empty, Price, TableHead, TableRow } from '../src/components';
 import { fill, theme } from '../src/theme';
 
 const c = theme.color;
+const CARD_H = 208;
+const CARD_GAP = theme.space(3);
+const SNAP = CARD_H + CARD_GAP;
+
 const WINDOWS: { key: Window; label: string }[] = [
   { key: 'any', label: 'Any time' },
   { key: 'morning', label: 'Morning' },
   { key: 'afternoon', label: 'Afternoon' },
 ];
 const HOLES: { key: Holes; label: string }[] = [
-  { key: '18', label: '18' },
-  { key: '9', label: '9' },
+  { key: '18', label: '18 holes' },
+  { key: '9', label: '9 holes' },
   { key: 'both', label: 'Both' },
 ];
+
+type View2 = 'cards' | 'table';
+
+interface Group {
+  key: string;
+  head: TeeTime;
+  from: number;
+  count: number;
+}
 
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
@@ -46,18 +66,24 @@ function nextDays(n: number) {
   });
 }
 
-/** Group the flat tee-time list into one section per course, cheapest first. */
-function byCourse(times: TeeTime[]) {
+/** One entry per course, cheapest first — the card deck. */
+function groupByCourse(times: TeeTime[]): Group[] {
   const map = new Map<string, TeeTime[]>();
   for (const t of times) {
     const list = map.get(t.courseKey);
     if (list) list.push(t);
     else map.set(t.courseKey, [t]);
   }
-  return [...map.values()]
-    .map((list) => {
-      const sorted = [...list].sort((a, b) => a.price - b.price);
-      return { head: sorted[0], from: sorted[0].price, count: list.length, data: [list[0]] };
+  return [...map.entries()]
+    .map(([key, list]) => {
+      const cheapest = list.reduce((a, b) => (b.price < a.price ? b : a));
+      const earliest = list.reduce((a, b) => (b.time < a.time ? b : a));
+      return {
+        key,
+        head: { ...cheapest, time: earliest.time },
+        from: cheapest.price,
+        count: list.length,
+      };
     })
     .sort((a, b) => a.from - b.from);
 }
@@ -70,6 +96,7 @@ export default function Home() {
   const [window, setWindow] = React.useState<Window>('any');
   const [holes, setHoles] = React.useState<Holes>('18');
   const [players, setPlayers] = React.useState(2);
+  const [view, setView] = React.useState<View2>('cards');
 
   const [result, setResult] = React.useState<SearchResult | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -94,8 +121,8 @@ export default function Home() {
     }
   }, [params]);
 
-  // Show any cached result for these filters immediately; don't auto-fetch,
-  // since a search hammers ~45 booking engines.
+  // Show any cached result for these filters immediately, but don't auto-fetch:
+  // one search is real load on ~45 clubs' booking systems.
   React.useEffect(() => {
     let live = true;
     setResult(null);
@@ -106,8 +133,8 @@ export default function Home() {
     };
   }, [params]);
 
-  const sections = React.useMemo(
-    () => (result ? byCourse(result.teeTimes) : []),
+  const groups = React.useMemo(
+    () => (result ? groupByCourse(result.teeTimes) : []),
     [result],
   );
 
@@ -116,169 +143,216 @@ export default function Home() {
     fn();
   };
 
+  const openCourse = (courseKey: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    router.push({ pathname: '/course/[key]', params: { key: courseKey, date } });
+  };
+
+  const header = (
+    <View style={{ paddingTop: insets.top + theme.space(3) }}>
+      <View style={s.header}>
+        <Text style={s.kicker}>SOTOGRANDE → FUENGIROLA</Text>
+        <Text style={s.h1}>Tee Timer</Text>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.dateStrip}
+      >
+        {days.map((d) => {
+          const key = iso(d);
+          const active = key === date;
+          return (
+            <Pressable
+              key={key}
+              onPress={tap(() => setDate(key))}
+              style={[s.day, active && s.dayOn]}
+            >
+              <Text style={[s.dayName, active && s.dayTextOn]}>
+                {d.toLocaleDateString('en-GB', { weekday: 'short' })}
+              </Text>
+              <Text style={[s.dayNum, active && s.dayTextOn]}>{d.getDate()}</Text>
+              <Text style={[s.dayMon, active && s.dayTextOn]}>
+                {d.toLocaleDateString('en-GB', { month: 'short' })}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+
+      <View style={s.controls}>
+        <Segmented
+          options={WINDOWS}
+          value={window}
+          onChange={(v) => tap(() => setWindow(v as Window))()}
+        />
+        <Segmented
+          options={HOLES}
+          value={holes}
+          onChange={(v) => tap(() => setHoles(v as Holes))()}
+        />
+        <View style={s.stepper}>
+          <Pressable
+            onPress={tap(() => setPlayers((p) => Math.max(1, p - 1)))}
+            style={s.stepBtn}
+            hitSlop={10}
+            accessibilityLabel="Fewer players"
+          >
+            <Text style={s.stepSign}>−</Text>
+          </Pressable>
+          <Text style={s.stepValue}>
+            {players} {players === 1 ? 'player' : 'players'}
+          </Text>
+          <Pressable
+            onPress={tap(() => setPlayers((p) => Math.min(4, p + 1)))}
+            style={s.stepBtn}
+            hitSlop={10}
+            accessibilityLabel="More players"
+          >
+            <Text style={s.stepSign}>+</Text>
+          </Pressable>
+        </View>
+
+        <Pressable
+          onPress={tap(run)}
+          disabled={loading}
+          style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
+        >
+          {loading ? (
+            <ActivityIndicator color={c.accentInk} />
+          ) : (
+            <Text style={s.ctaText}>Find tee times</Text>
+          )}
+        </Pressable>
+      </View>
+
+      {error && (
+        <View style={s.error}>
+          <Text style={s.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {result && (
+        <>
+          <View style={s.summary}>
+            <Stat label="Courses" value={`${result.coursesWithSpace}`} />
+            <Stat label="Tee times" value={`${result.teeTimes.length}`} />
+            <Stat
+              label="From"
+              accent
+              value={
+                result.teeTimes.length
+                  ? `€${Math.min(...result.teeTimes.map((t) => t.price)).toFixed(0)}`
+                  : '—'
+              }
+            />
+          </View>
+
+          <View style={s.viewBar}>
+            {result.fromCache ? <Chip label="offline copy" tone="deal" /> : <View />}
+            <View style={s.toggle}>
+              {(['cards', 'table'] as View2[]).map((v) => (
+                <Pressable
+                  key={v}
+                  onPress={tap(() => setView(v))}
+                  style={[s.toggleItem, view === v && s.toggleItemOn]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${v} view`}
+                >
+                  <Text style={[s.toggleText, view === v && s.toggleTextOn]}>
+                    {v === 'cards' ? '▦  Cards' : '☰  Table'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          {view === 'table' && result.teeTimes.length > 0 && <TableHead />}
+        </>
+      )}
+    </View>
+  );
+
+  const empty = loading ? (
+    <View style={s.loading}>
+      <ActivityIndicator color={c.accent} />
+      <Text style={s.loadingText}>
+        Checking every booking engine from Sotogrande to Fuengirola…
+      </Text>
+    </View>
+  ) : result ? (
+    <Empty
+      title="Nothing free"
+      body="No tee times matched. Try another day, a wider time window, or 9 holes."
+    />
+  ) : (
+    <Empty title="Pick a day" body="Choose a date and time of day, then tap Find tee times." />
+  );
+
+  const refresh = (
+    <RefreshControl refreshing={loading} onRefresh={run} tintColor={c.accent} />
+  );
+  const pad = { paddingBottom: insets.bottom + theme.space(8) };
+
+  if (view === 'table') {
+    return (
+      <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <FlatList
+          data={result?.teeTimes ?? []}
+          keyExtractor={(t, i) => `${t.courseKey}-${t.time}-${i}`}
+          renderItem={({ item }) => (
+            <TableRow
+              t={item}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+                Linking.openURL(item.bookingUrl).catch(() => {});
+              }}
+            />
+          )}
+          ListHeaderComponent={header}
+          ListEmptyComponent={empty}
+          contentContainerStyle={pad}
+          refreshControl={refresh}
+          initialNumToRender={20}
+          windowSize={11}
+        />
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <SectionList
-        sections={sections.map((s) => ({ ...s, title: s.head.courseKey }))}
-        keyExtractor={(item, i) => `${item.courseKey}-${i}`}
-        contentContainerStyle={{ paddingBottom: insets.bottom + theme.space(8) }}
-        stickySectionHeadersEnabled={false}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={run} tintColor={c.accent} />
-        }
-        ListHeaderComponent={
-          <View style={{ paddingTop: insets.top + theme.space(3) }}>
-            <View style={s.header}>
-              <Text style={s.kicker}>SOTOGRANDE → FUENGIROLA</Text>
-              <Text style={s.h1}>Tee Timer</Text>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.dateStrip}
-            >
-              {days.map((d) => {
-                const key = iso(d);
-                const active = key === date;
-                return (
-                  <Pressable
-                    key={key}
-                    onPress={tap(() => setDate(key))}
-                    style={[s.day, active && s.dayOn]}
-                  >
-                    <Text style={[s.dayName, active && s.dayTextOn]}>
-                      {d.toLocaleDateString('en-GB', { weekday: 'short' })}
-                    </Text>
-                    <Text style={[s.dayNum, active && s.dayTextOn]}>{d.getDate()}</Text>
-                    <Text style={[s.dayMon, active && s.dayTextOn]}>
-                      {d.toLocaleDateString('en-GB', { month: 'short' })}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-
-            <View style={s.controls}>
-              <Segmented
-                options={WINDOWS.map((w) => ({ key: w.key, label: w.label }))}
-                value={window}
-                onChange={(v) => tap(() => setWindow(v as Window))()}
-              />
-              <Segmented
-                options={HOLES.map((h) => ({ key: h.key, label: `${h.label} holes` }))}
-                value={holes}
-                onChange={(v) => tap(() => setHoles(v as Holes))()}
-              />
-              <View style={s.stepper}>
-                <Pressable
-                  onPress={tap(() => setPlayers((p) => Math.max(1, p - 1)))}
-                  style={s.stepBtn}
-                  hitSlop={10}
-                  accessibilityLabel="Fewer players"
-                >
-                  <Text style={s.stepSign}>−</Text>
-                </Pressable>
-                <Text style={s.stepValue}>
-                  {players} {players === 1 ? 'player' : 'players'}
-                </Text>
-                <Pressable
-                  onPress={tap(() => setPlayers((p) => Math.min(4, p + 1)))}
-                  style={s.stepBtn}
-                  hitSlop={10}
-                  accessibilityLabel="More players"
-                >
-                  <Text style={s.stepSign}>+</Text>
-                </Pressable>
-              </View>
-
-              <Pressable
-                onPress={tap(run)}
-                disabled={loading}
-                style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
-              >
-                {loading ? (
-                  <ActivityIndicator color={c.accentInk} />
-                ) : (
-                  <Text style={s.ctaText}>Find tee times</Text>
-                )}
-              </Pressable>
-            </View>
-
-            {error && (
-              <View style={s.error}>
-                <Text style={s.errorText}>{error}</Text>
-              </View>
-            )}
-
-            {result && (
-              <View style={s.summary}>
-                <Stat label="Courses" value={`${result.coursesWithSpace}`} />
-                <Stat
-                  label="Tee times"
-                  value={`${result.teeTimes.length}`}
-                />
-                <Stat
-                  label="From"
-                  value={
-                    result.teeTimes.length
-                      ? `€${Math.min(...result.teeTimes.map((t) => t.price)).toFixed(0)}`
-                      : '—'
-                  }
-                  accent
-                />
-                {result.fromCache && <Chip label="offline copy" tone="deal" />}
-              </View>
-            )}
-          </View>
-        }
-        renderSectionHeader={() => null}
-        renderItem={({ section }) => {
-          const meta = sections.find((x) => x.head.courseKey === section.title)!;
-          return <CourseCard item={meta} date={date} />;
-        }}
-        ListEmptyComponent={
-          loading ? (
-            <View style={s.loading}>
-              <ActivityIndicator color={c.accent} />
-              <Text style={s.loadingText}>
-                Checking every booking engine from Sotogrande to Fuengirola…
-              </Text>
-            </View>
-          ) : result ? (
-            <Empty
-              title="Nothing free"
-              body="No tee times matched. Try another day, a wider time window, or 9 holes."
-            />
-          ) : (
-            <Empty
-              title="Pick a day"
-              body="Choose a date and time of day, then tap Find tee times."
-            />
-          )
-        }
+      <FlatList
+        data={groups}
+        keyExtractor={(g) => g.key}
+        renderItem={({ item }) => (
+          <CourseCard group={item} onPress={() => openCourse(item.key)} />
+        )}
+        ListHeaderComponent={header}
+        ListEmptyComponent={empty}
+        contentContainerStyle={pad}
+        refreshControl={refresh}
+        // Snap so the deck settles on a card rather than mid-photo.
+        snapToInterval={SNAP}
+        snapToAlignment="start"
+        decelerationRate="fast"
+        disableIntervalMomentum
+        initialNumToRender={4}
+        windowSize={7}
       />
     </View>
   );
 }
 
-function CourseCard({
-  item,
-  date,
-}: {
-  item: { head: TeeTime; from: number; count: number };
-  date: string;
-}) {
-  const { head, from, count } = item;
+function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
+  const { head, from, count } = group;
   return (
     <Pressable
-      onPress={() => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-        router.push({ pathname: '/course/[key]', params: { key: head.courseKey, date } });
-      }}
+      onPress={onPress}
       style={({ pressed }) => [s.card, pressed && { transform: [{ scale: 0.985 }] }]}
     >
-      {/* CourseArt already lays down the scrim; a second one turns photos black. */}
+      {/* CourseArt lays down its own scrim; a second one turns photos black. */}
       <CourseArt image={head.image} seed={head.club} style={s.cardArt} radius={theme.radius.lg} />
       <View style={s.cardBody}>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -311,23 +385,20 @@ function Segmented({
   options,
   value,
   onChange,
-  compact,
 }: {
   options: { key: string; label: string }[];
   value: string;
   onChange: (key: string) => void;
-  compact?: boolean;
 }) {
   return (
-    <View style={[s.seg, compact && s.segCompact]}>
+    <View style={s.seg}>
       {options.map((o) => {
         const on = o.key === value;
         return (
           <Pressable
             key={o.key}
             onPress={() => onChange(o.key)}
-            // Compact segments size to their label; full-width ones share the row.
-            style={[s.segItem, compact && s.segItemCompact, on && s.segItemOn]}
+            style={[s.segItem, on && s.segItemOn]}
           >
             <Text style={[s.segText, on && s.segTextOn]}>{o.label}</Text>
           </Pressable>
@@ -358,24 +429,20 @@ const s = StyleSheet.create({
   dayMon: { ...theme.font.caption, color: c.faint },
   dayTextOn: { color: c.accentInk },
 
-  controls: { paddingHorizontal: theme.space(5), paddingTop: theme.space(4), gap: theme.space(3) },
-  controlRow: { flexDirection: 'row', gap: theme.space(3), alignItems: 'center' },
+  controls: { paddingHorizontal: theme.space(5), paddingTop: theme.space(4), gap: theme.space(2) },
   seg: {
     flexDirection: 'row',
     backgroundColor: c.surface,
     borderRadius: theme.radius.pill,
     padding: 4,
-    flex: 1,
   },
   segItem: {
     flex: 1,
     paddingVertical: 9,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: theme.radius.pill,
     alignItems: 'center',
   },
-  segCompact: { flex: 0, flexGrow: 0, flexShrink: 0 },
-  segItemCompact: { flex: 0, minWidth: 46, paddingHorizontal: 14 },
   segItemOn: { backgroundColor: c.surfaceHi },
   segText: { ...theme.font.label, color: c.muted },
   segTextOn: { color: c.text },
@@ -398,6 +465,7 @@ const s = StyleSheet.create({
     borderRadius: theme.radius.pill,
     paddingVertical: 15,
     alignItems: 'center',
+    marginTop: theme.space(1),
     ...theme.shadow.card,
   },
   ctaText: { ...theme.font.title, color: c.accentInk },
@@ -416,10 +484,8 @@ const s = StyleSheet.create({
   summary: {
     flexDirection: 'row',
     gap: theme.space(2),
-    alignItems: 'center',
     paddingHorizontal: theme.space(5),
     paddingTop: theme.space(5),
-    paddingBottom: theme.space(1),
   },
   stat: {
     flex: 1,
@@ -430,10 +496,29 @@ const s = StyleSheet.create({
   statLabel: { ...theme.font.caption, color: c.faint },
   statValue: { ...theme.font.title, color: c.text, marginTop: 2 },
 
+  viewBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.space(5),
+    paddingTop: theme.space(4),
+    paddingBottom: theme.space(2),
+  },
+  toggle: {
+    flexDirection: 'row',
+    backgroundColor: c.surface,
+    borderRadius: theme.radius.pill,
+    padding: 3,
+  },
+  toggleItem: { paddingVertical: 7, paddingHorizontal: 14, borderRadius: theme.radius.pill },
+  toggleItemOn: { backgroundColor: c.accent },
+  toggleText: { ...theme.font.caption, letterSpacing: 0.2, color: c.muted },
+  toggleTextOn: { color: c.accentInk },
+
   card: {
-    height: 208,
+    height: CARD_H,
     marginHorizontal: theme.space(5),
-    marginTop: theme.space(3),
+    marginTop: CARD_GAP,
     borderRadius: theme.radius.lg,
     overflow: 'hidden',
     justifyContent: 'flex-end',

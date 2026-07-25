@@ -38,13 +38,26 @@ reads JSON from `/api/search`.
 ```
 app/
   _layout.tsx        dark stack navigator
-  index.tsx          search + results, grouped by course
+  index.tsx          search + results (cards / table)
   course/[key].tsx   every tee time at one course
 src/
   api.ts             typed client, 90s ceiling, AsyncStorage cache
-  components.tsx     course art, chips, price, tee-time row
+  components.tsx     course art, chips, price, tee-time + table rows
   theme.ts           palette, type scale, spacing
 ```
+
+### Two ways to read the results
+
+**Cards** — one photo card per course, cheapest first, snap-scrolling so the
+deck settles on a card rather than mid-photo. Tap through for that course's
+full tee sheet.
+
+**Table** — every tee time on the coast in one dense, time-ordered list:
+tee, course, rate, max players, price. Tapping a row opens the club's booking
+page directly. Use it when you know what you want and just need the cheapest
+slot at 8am.
+
+Toggle between them with the control above the results.
 
 Notes:
 

@@ -80,11 +80,16 @@ tools/
   but a visiting adult can't book them, and they otherwise dominate "cheapest"
   (Valle Romano publishes a free junior promo). The rule lives in
   `models.is_restricted` so every front end filters identically.
-- **Course photography is referenced, never redistributed.** 24 of 38 clubs
-  publish a usable hero image — the engine's own artwork where it's public,
-  otherwise the `og:image` a club puts out for link previews, otherwise the
-  largest photo on its home page. The rest get generated artwork keyed off the
-  club name. Refresh with `python -m tools.harvest_images`.
+- **Course photography is referenced, never redistributed, and every image has
+  been looked at.** 23 of 38 clubs yield a photo of the actual playing surface.
+  Filename heuristics alone were not enough — they happily accepted a drawn
+  course map, the Ronda bridge, a Seve Ballesteros portrait, a screenshot of a
+  club's own home page and a sponsors' group photo. So
+  `python -m tools.contact_sheet` downloads every chosen image into labelled
+  montages for review, and anything wrong goes into `REJECTED` / `OVERRIDES` in
+  `tools/harvest_images.py`. Clubs with nothing usable (Miraflores renders its
+  gallery in JavaScript) get generated artwork rather than a wrong photograph.
+  Refresh with `python -m tools.harvest_images`, then re-check the montages.
 - **A club that is closed, full or has no rate sheet published is reported as
   such**, not as an error. Genuine failures get their own expander.
 - **Río Real sells time bands, not slots.** Its engine prices a window
