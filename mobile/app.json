@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Tee Timer",
+    "slug": "tee-timer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "teetimer",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#07120D",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#07120D"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cavanblack.teetimer"
+    },
+    "android": {
+      "package": "com.cavanblack.teetimer",
+      "adaptiveIcon": {
+        "backgroundColor": "#07120D",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-image"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

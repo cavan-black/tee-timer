@@ -21,6 +21,7 @@ class Course:
     resource: int | None = None        # golfmanager idResource
     route: str = ""                    # teeone idRec
     corridor: bool = True     # inside the Sotogrande -> Fuengirola corridor
+    site: str = ""            # club website, used to harvest hero imagery
 
     @property
     def key(self) -> str:
@@ -71,6 +72,19 @@ _EIGHTEEN = re.compile(r"\b(18\s*(h|holes?|hoyos)?|eighteen)\b", re.I)
 
 
 _CLOCK = re.compile(r"\b\d{1,2}[:.]\d{2}\b")
+
+# Rates the engines list but a visiting adult can't actually book. Left in the
+# data, flagged here, so every client filters them the same way -- otherwise a
+# free junior promo becomes the headline "cheapest" price.
+_RESTRICTED = re.compile(
+    r"\b(junior|jnr|infantil|cadete|under\s?1[0-8]|pga|profesional|professional"
+    r"|federad[oa]|soci[oa]s?|member|abonad[oa]|residente|resident)\b",
+    re.I,
+)
+
+
+def is_restricted(rate_name: str) -> bool:
+    return bool(_RESTRICTED.search(rate_name))
 
 
 def rate_holes(rate_name: str, course_holes: int) -> int:

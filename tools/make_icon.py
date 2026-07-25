@@ -56,10 +56,45 @@ def build() -> Image.Image:
     return img.resize((SIZE, SIZE), Image.LANCZOS)
 
 
+# Native app icons come from the same drawing so the web app, the iOS
+# home-screen shortcut and the store builds all look like one product.
+MOBILE = ROOT / "mobile" / "assets"
+NATIVE = [
+    (MOBILE / "icon.png", 1024, False),
+    (MOBILE / "favicon.png", 48, False),
+    (MOBILE / "splash-icon.png", 512, True),
+    (MOBILE / "android-icon-foreground.png", 432, True),
+    (MOBILE / "android-icon-background.png", 432, False),
+    (MOBILE / "android-icon-monochrome.png", 432, True),
+]
+
+
+def _at(size: int) -> Image.Image:
+    global SIZE
+    previous, SIZE = SIZE, size
+    try:
+        return build()
+    finally:
+        SIZE = previous
+
+
 if __name__ == "__main__":
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    icon = build()
+    icon = _at(SIZE)
     icon.save(OUT, "PNG", optimize=True)
     print(f"wrote {OUT.relative_to(ROOT)}  {icon.size[0]}x{icon.size[1]}  "
           f"{OUT.stat().st_size:,} bytes")
+
+    if MOBILE.exists():
+        for path, size, inset in NATIVE:
+            img = _at(size)
+            if inset:
+                # Android masks aggressively; keep the art inside the safe zone.
+                pad = int(size * 0.18)
+                canvas = Image.new("RGB", (size, size), GREEN_DARK)
+                canvas.paste(img.resize((size - 2 * pad, size - 2 * pad), Image.LANCZOS),
+                             (pad, pad))
+                img = canvas
+            img.save(path, "PNG", optimize=True)
+            print(f"wrote {path.relative_to(ROOT)}  {size}x{size}")
     sys.exit(0)

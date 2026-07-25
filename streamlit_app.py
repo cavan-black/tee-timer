@@ -1,7 +1,6 @@
 """Tee Timer — live green fees and tee times, Sotogrande to Fuengirola."""
 from __future__ import annotations
 
-import re
 from datetime import date, datetime, timedelta
 
 import pandas as pd
@@ -10,21 +9,13 @@ import streamlit as st
 from teetimer import AREAS, COURSES, scrape
 from teetimer import homescreen, ui
 from teetimer.courses import BY_KEY
-from teetimer.models import rate_holes
+from teetimer.models import is_restricted, rate_holes
 
 st.set_page_config(page_title="Tee Timer — Costa del Sol", page_icon="⛳",
                    layout="wide", initial_sidebar_state="auto")
 
 WINDOWS = {"Any time": "any", "Morning": "morning", "Afternoon": "afternoon"}
 PAGE = 60
-
-# Rates a visiting adult cannot actually book, but which the engines still list
-# and which would otherwise dominate the "cheapest" column.
-RESTRICTED = re.compile(
-    r"\b(junior|jnr|infantil|cadete|under\s?1[0-8]|pga|profesional|professional"
-    r"|federad[oa]|soci[oa]s?|member|abonad[oa]|residente|resident)\b",
-    re.I,
-)
 
 
 def is_dark() -> bool:
@@ -46,7 +37,7 @@ def to_frame(results, hide_restricted: bool, max_price: float | None,
     rows = []
     for result in results:
         for tee in result.tee_times:
-            if hide_restricted and RESTRICTED.search(tee.rate_name):
+            if hide_restricted and is_restricted(tee.rate_name):
                 continue
             if max_price is not None and tee.price > max_price:
                 continue

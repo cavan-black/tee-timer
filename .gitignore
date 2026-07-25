@@ -6,3 +6,14 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# node / expo
+node_modules/
+.expo/
+.expo-export-check/
+dist/
+*.tsbuildinfo
+mobile/.env
+
+# vercel
+.vercel

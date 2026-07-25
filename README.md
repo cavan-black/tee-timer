@@ -1,18 +1,24 @@
 # Tee Timer
 
 Live tee times and green fees for every bookable golf course between Sotogrande
-and Fuengirola, in one table. Pick a date and a time of day, hit search, and the
-app queries each club's own booking engine in parallel.
+and Fuengirola. Pick a date and a time of day, and it queries each club's own
+booking engine in parallel.
 
-## Running it
+Three front ends, one set of scrapers:
+
+| | Where | Run it |
+| --- | --- | --- |
+| **Web** | Streamlit | `streamlit run streamlit_app.py` |
+| **API** | FastAPI / Vercel | `python -m uvicorn api.index:app --port 8000` |
+| **iPhone + Android** | Expo (React Native) | `cd mobile && npx expo start` — see [mobile/README.md](mobile/README.md) |
 
 ```bash
 pip install -r requirements.txt
-streamlit run streamlit_app.py
 ```
 
-Deploy on Streamlit Community Cloud by pointing a new app at this repo with
-`streamlit_app.py` as the entrypoint — no secrets or API keys are needed.
+Deploy the web app on Streamlit Community Cloud by pointing it at this repo with
+`streamlit_app.py` as the entrypoint. Deploy the API on Vercel (`vercel.json` is
+committed). Neither needs secrets or API keys.
 
 ## How it works
 
@@ -34,26 +40,32 @@ a short-lived `rid` token that must be echoed back as a request header (without
 it every call is a 401).
 
 ```
-teetimer/
-  courses.py          registry of clubs -> platform + route ids
-  models.py           Course / TeeTime / rate classification
-  scraper.py          concurrent fan-out, per-course error isolation
-  ui.py               responsive results list (CSS + HTML)
-  homescreen.py       iOS home-screen icon + web-app tags
+teetimer/              the engine — shared by all three front ends
+  courses.py           registry of clubs -> platform + route ids
+  models.py            Course / TeeTime, rate + hole classification
+  scraper.py           concurrent fan-out, per-course error isolation
+  sites.py             club websites (imagery only, never scraping)
+  ui.py                responsive results list for Streamlit
+  homescreen.py        iOS home-screen icon + web-app tags
   adapters/
-    golfmanager.py    classic + hosted front-ends
+    golfmanager.py     classic + hosted front-ends
     teeone.py
     rioreal.py
     mastergolf.py
-streamlit_app.py      the UI
-assets/icon-180.png   home-screen icon (regenerate: python -m tools.make_icon)
+streamlit_app.py       web UI
+api/index.py           JSON API for the mobile app
+mobile/                Expo app (iPhone + Android)
+assets/
+  icon-180.png         home-screen icon
+  course_images.json   harvested hero image URLs, referenced not bundled
 tools/
-  smoke.py            hit every course, report coverage
-  discover.py         re-verify the registry against the live engines
-  make_icon.py        draw assets/icon-180.png
-  test_filters.py     rate-name -> hole-count classification tests
-  test_render.py      results-list rendering checks
-  test_mastergolf.py  session/cap workaround checks for Miraflores
+  smoke.py             hit every course, report coverage
+  discover.py          re-verify the registry against the live engines
+  harvest_images.py    refresh course_images.json
+  make_icon.py         draw the web + native app icons
+  test_filters.py      rate-name -> hole-count classification tests
+  test_render.py       results-list rendering checks
+  test_mastergolf.py   session/cap workaround checks for Miraflores
 ```
 
 ## Details worth knowing
@@ -65,7 +77,14 @@ tools/
   them into an 18-hole search. Clock digits in a rate name are ignored so
   "time band 09:00–10:50" isn't mistaken for a 9-hole round.
 - **Junior / member / pro rates are hidden by default.** The engines list them
-  but a visiting adult can't book them, and they otherwise dominate "cheapest".
+  but a visiting adult can't book them, and they otherwise dominate "cheapest"
+  (Valle Romano publishes a free junior promo). The rule lives in
+  `models.is_restricted` so every front end filters identically.
+- **Course photography is referenced, never redistributed.** 24 of 38 clubs
+  publish a usable hero image — the engine's own artwork where it's public,
+  otherwise the `og:image` a club puts out for link previews, otherwise the
+  largest photo on its home page. The rest get generated artwork keyed off the
+  club name. Refresh with `python -m tools.harvest_images`.
 - **A club that is closed, full or has no rate sheet published is reported as
   such**, not as an error. Genuine failures get their own expander.
 - **Río Real sells time bands, not slots.** Its engine prices a window
