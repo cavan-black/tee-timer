@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   cachedSearch,
+  fetchCourses,
   search,
   type Holes,
   type SearchResult,
@@ -24,6 +25,8 @@ import {
   type Window,
 } from '../src/api';
 import { Chip, CourseArt, Empty, Price, TableHead, TableRow } from '../src/components';
+import { groupByCourse, rankProblems, sortTeeTimes, type Group, type SortBy } from '../src/results';
+import { remember } from '../src/store';
 import { fill, theme } from '../src/theme';
 
 const c = theme.color;
@@ -42,14 +45,7 @@ const HOLES: { key: Holes; label: string }[] = [
   { key: 'both', label: 'Both' },
 ];
 
-type View2 = 'cards' | 'table';
-
-interface Group {
-  key: string;
-  head: TeeTime;
-  from: number;
-  count: number;
-}
+type ViewMode = 'cards' | 'table';
 
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
@@ -66,56 +62,55 @@ function nextDays(n: number) {
   });
 }
 
-/** One entry per course, cheapest first — the card deck. */
-function groupByCourse(times: TeeTime[]): Group[] {
-  const map = new Map<string, TeeTime[]>();
-  for (const t of times) {
-    const list = map.get(t.courseKey);
-    if (list) list.push(t);
-    else map.set(t.courseKey, [t]);
-  }
-  return [...map.entries()]
-    .map(([key, list]) => {
-      const cheapest = list.reduce((a, b) => (b.price < a.price ? b : a));
-      const earliest = list.reduce((a, b) => (b.time < a.time ? b : a));
-      return {
-        key,
-        head: { ...cheapest, time: earliest.time },
-        from: cheapest.price,
-        count: list.length,
-      };
-    })
-    .sort((a, b) => a.from - b.from);
+/** "Sotogrande / San Roque" -> "Sotogrande" so the chips stay thumb-sized. */
+function shortArea(area: string) {
+  return area.split(' / ')[0].replace(' (Alhaurín)', '');
 }
 
 export default function Home() {
   const insets = useSafeAreaInsets();
-  const days = React.useMemo(() => nextDays(21), []);
+  const days = React.useMemo(() => nextDays(28), []);
 
   const [date, setDate] = React.useState(iso(days[1] ?? days[0]));
   const [window, setWindow] = React.useState<Window>('any');
   const [holes, setHoles] = React.useState<Holes>('18');
   const [players, setPlayers] = React.useState(2);
-  const [view, setView] = React.useState<View2>('cards');
+  const [areas, setAreas] = React.useState<string[]>([]);
+  const [allAreas, setAllAreas] = React.useState<string[]>([]);
+
+  const [view, setView] = React.useState<ViewMode>('cards');
+  const [sortBy, setSortBy] = React.useState<SortBy>('time');
 
   const [result, setResult] = React.useState<SearchResult | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [showProblems, setShowProblems] = React.useState(false);
 
   const params = React.useMemo(
-    () => ({ date, window, players, holes }),
-    [date, window, players, holes],
+    () => ({ date, window, players, holes, areas: areas.length ? areas : undefined }),
+    [date, window, players, holes, areas],
   );
+
+  React.useEffect(() => {
+    fetchCourses()
+      .then((d) => setAllAreas(d.areas))
+      .catch(() => {}); // area chips are a refinement; the search works without them
+  }, []);
 
   const run = React.useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      setResult(await search(params));
+      const fresh = await search(params);
+      setResult(fresh);
+      remember(params, fresh);
     } catch (err: any) {
       setError(err?.message ?? 'Something went wrong.');
       const fallback = await cachedSearch(params);
-      if (fallback) setResult(fallback);
+      if (fallback) {
+        setResult(fallback);
+        remember(params, fallback);
+      }
     } finally {
       setLoading(false);
     }
@@ -127,7 +122,13 @@ export default function Home() {
     let live = true;
     setResult(null);
     setError(null);
-    cachedSearch(params).then((r) => live && r && setResult(r));
+    setShowProblems(false);
+    cachedSearch(params).then((r) => {
+      if (live && r) {
+        setResult(r);
+        remember(params, r);
+      }
+    });
     return () => {
       live = false;
     };
@@ -135,6 +136,14 @@ export default function Home() {
 
   const groups = React.useMemo(
     () => (result ? groupByCourse(result.teeTimes) : []),
+    [result],
+  );
+  const rows = React.useMemo(
+    () => (result ? sortTeeTimes(result.teeTimes, sortBy) : []),
+    [result, sortBy],
+  );
+  const problems = React.useMemo(
+    () => (result ? rankProblems(result.problems) : []),
     [result],
   );
 
@@ -145,8 +154,21 @@ export default function Home() {
 
   const openCourse = (courseKey: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    router.push({ pathname: '/course/[key]', params: { key: courseKey, date } });
+    router.push({
+      pathname: '/course/[key]',
+      params: { key: courseKey, date, window, players: String(players), holes },
+    });
   };
+
+  const openBooking = (url: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    Linking.openURL(url).catch(() => {});
+  };
+
+  const toggleArea = (area: string) =>
+    setAreas((prev) =>
+      prev.includes(area) ? prev.filter((a) => a !== area) : [...prev, area],
+    );
 
   const header = (
     <View style={{ paddingTop: insets.top + theme.space(3) }}>
@@ -158,7 +180,7 @@ export default function Home() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.dateStrip}
+        contentContainerStyle={s.strip}
       >
         {days.map((d) => {
           const key = iso(d);
@@ -168,6 +190,8 @@ export default function Home() {
               key={key}
               onPress={tap(() => setDate(key))}
               style={[s.day, active && s.dayOn]}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
             >
               <Text style={[s.dayName, active && s.dayTextOn]}>
                 {d.toLocaleDateString('en-GB', { weekday: 'short' })}
@@ -182,16 +206,8 @@ export default function Home() {
       </ScrollView>
 
       <View style={s.controls}>
-        <Segmented
-          options={WINDOWS}
-          value={window}
-          onChange={(v) => tap(() => setWindow(v as Window))()}
-        />
-        <Segmented
-          options={HOLES}
-          value={holes}
-          onChange={(v) => tap(() => setHoles(v as Holes))()}
-        />
+        <Segmented options={WINDOWS} value={window} onChange={(v) => tap(() => setWindow(v as Window))()} />
+        <Segmented options={HOLES} value={holes} onChange={(v) => tap(() => setHoles(v as Holes))()} />
         <View style={s.stepper}>
           <Pressable
             onPress={tap(() => setPlayers((p) => Math.max(1, p - 1)))}
@@ -213,11 +229,43 @@ export default function Home() {
             <Text style={s.stepSign}>+</Text>
           </Pressable>
         </View>
+      </View>
 
+      {allAreas.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.areaStrip}
+        >
+          <Pressable
+            onPress={tap(() => setAreas([]))}
+            style={[s.area, areas.length === 0 && s.areaOn]}
+          >
+            <Text style={[s.areaText, areas.length === 0 && s.areaTextOn]}>All areas</Text>
+          </Pressable>
+          {allAreas.map((a) => {
+            const on = areas.includes(a);
+            return (
+              <Pressable
+                key={a}
+                onPress={tap(() => toggleArea(a))}
+                style={[s.area, on && s.areaOn]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={[s.areaText, on && s.areaTextOn]}>{shortArea(a)}</Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      <View style={s.ctaWrap}>
         <Pressable
           onPress={tap(run)}
           disabled={loading}
           style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
+          accessibilityRole="button"
         >
           {loading ? (
             <ActivityIndicator color={c.accentInk} />
@@ -250,14 +298,30 @@ export default function Home() {
           </View>
 
           <View style={s.viewBar}>
-            {result.fromCache ? <Chip label="offline copy" tone="deal" /> : <View />}
+            {view === 'table' ? (
+              <View style={s.sort}>
+                {(['time', 'price'] as SortBy[]).map((k) => (
+                  <Pressable key={k} onPress={tap(() => setSortBy(k))} style={s.sortItem}>
+                    <Text style={[s.sortText, sortBy === k && s.sortTextOn]}>
+                      {k === 'time' ? 'By time' : 'By price'}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : result.fromCache ? (
+              <Chip label="offline copy" tone="deal" />
+            ) : (
+              <View />
+            )}
+
             <View style={s.toggle}>
-              {(['cards', 'table'] as View2[]).map((v) => (
+              {(['cards', 'table'] as ViewMode[]).map((v) => (
                 <Pressable
                   key={v}
                   onPress={tap(() => setView(v))}
                   style={[s.toggleItem, view === v && s.toggleItemOn]}
                   accessibilityRole="button"
+                  accessibilityState={{ selected: view === v }}
                   accessibilityLabel={`${v} view`}
                 >
                   <Text style={[s.toggleText, view === v && s.toggleTextOn]}>
@@ -268,11 +332,32 @@ export default function Home() {
             </View>
           </View>
 
-          {view === 'table' && result.teeTimes.length > 0 && <TableHead />}
+          {view === 'table' && rows.length > 0 && <TableHead />}
         </>
       )}
     </View>
   );
+
+  const footer =
+    result && problems.length > 0 ? (
+      <View style={s.problems}>
+        <Pressable onPress={tap(() => setShowProblems((v) => !v))} style={s.problemsHead}>
+          <Text style={s.problemsTitle}>
+            {problems.length} course{problems.length === 1 ? '' : 's'} with nothing to show
+          </Text>
+          <Text style={s.problemsChevron}>{showProblems ? '⌃' : '⌄'}</Text>
+        </Pressable>
+        {showProblems &&
+          problems.map((p) => (
+            <View key={`${p.course}-${p.reason}`} style={s.problemRow}>
+              <Text style={s.problemCourse}>{p.course}</Text>
+              <Text style={[s.problemReason, p.kind === 'error' && { color: c.danger }]}>
+                {p.reason}
+              </Text>
+            </View>
+          ))}
+      </View>
+    ) : null;
 
   const empty = loading ? (
     <View style={s.loading}>
@@ -290,32 +375,26 @@ export default function Home() {
     <Empty title="Pick a day" body="Choose a date and time of day, then tap Find tee times." />
   );
 
-  const refresh = (
-    <RefreshControl refreshing={loading} onRefresh={run} tintColor={c.accent} />
-  );
+  const refresh = <RefreshControl refreshing={loading} onRefresh={run} tintColor={c.accent} />;
   const pad = { paddingBottom: insets.bottom + theme.space(8) };
 
   if (view === 'table') {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
         <FlatList
-          data={result?.teeTimes ?? []}
+          data={rows}
           keyExtractor={(t, i) => `${t.courseKey}-${t.time}-${i}`}
           renderItem={({ item }) => (
-            <TableRow
-              t={item}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-                Linking.openURL(item.bookingUrl).catch(() => {});
-              }}
-            />
+            <TableRow t={item} onPress={() => openBooking(item.bookingUrl)} />
           )}
           ListHeaderComponent={header}
+          ListFooterComponent={footer}
           ListEmptyComponent={empty}
           contentContainerStyle={pad}
           refreshControl={refresh}
           initialNumToRender={20}
           windowSize={11}
+          removeClippedSubviews
         />
       </View>
     );
@@ -330,6 +409,7 @@ export default function Home() {
           <CourseCard group={item} onPress={() => openCourse(item.key)} />
         )}
         ListHeaderComponent={header}
+        ListFooterComponent={footer}
         ListEmptyComponent={empty}
         contentContainerStyle={pad}
         refreshControl={refresh}
@@ -351,6 +431,8 @@ function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
     <Pressable
       onPress={onPress}
       style={({ pressed }) => [s.card, pressed && { transform: [{ scale: 0.985 }] }]}
+      accessibilityRole="button"
+      accessibilityLabel={`${head.label}, ${count} tee times from €${from}`}
     >
       {/* CourseArt lays down its own scrim; a second one turns photos black. */}
       <CourseArt image={head.image} seed={head.club} style={s.cardArt} radius={theme.radius.lg} />
@@ -399,6 +481,8 @@ function Segmented({
             key={o.key}
             onPress={() => onChange(o.key)}
             style={[s.segItem, on && s.segItemOn]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
           >
             <Text style={[s.segText, on && s.segTextOn]}>{o.label}</Text>
           </Pressable>
@@ -413,7 +497,7 @@ const s = StyleSheet.create({
   kicker: { ...theme.font.caption, color: c.accent, marginBottom: 4 },
   h1: { ...theme.font.display, color: c.text },
 
-  dateStrip: { paddingHorizontal: theme.space(5), gap: 8, paddingVertical: theme.space(1) },
+  strip: { paddingHorizontal: theme.space(5), gap: 8, paddingVertical: theme.space(1) },
   day: {
     width: 58,
     paddingVertical: 10,
@@ -460,12 +544,29 @@ const s = StyleSheet.create({
   stepSign: { color: c.text, fontSize: 22, lineHeight: 24, fontWeight: '600' },
   stepValue: { ...theme.font.label, color: c.text, textAlign: 'center' },
 
+  areaStrip: {
+    paddingHorizontal: theme.space(5),
+    gap: 6,
+    paddingTop: theme.space(3),
+  },
+  area: {
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: theme.radius.pill,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  areaOn: { borderColor: c.accent, backgroundColor: c.surfaceHi },
+  areaText: { ...theme.font.caption, letterSpacing: 0.2, color: c.muted },
+  areaTextOn: { color: c.accent },
+
+  ctaWrap: { paddingHorizontal: theme.space(5), paddingTop: theme.space(3) },
   cta: {
     backgroundColor: c.accent,
     borderRadius: theme.radius.pill,
     paddingVertical: 15,
     alignItems: 'center',
-    marginTop: theme.space(1),
     ...theme.shadow.card,
   },
   ctaText: { ...theme.font.title, color: c.accentInk },
@@ -504,6 +605,10 @@ const s = StyleSheet.create({
     paddingTop: theme.space(4),
     paddingBottom: theme.space(2),
   },
+  sort: { flexDirection: 'row', gap: theme.space(3) },
+  sortItem: { paddingVertical: 4 },
+  sortText: { ...theme.font.caption, letterSpacing: 0.2, color: c.faint },
+  sortTextOn: { color: c.accent },
   toggle: {
     flexDirection: 'row',
     backgroundColor: c.surface,
@@ -534,6 +639,28 @@ const s = StyleSheet.create({
   cardArea: { ...theme.font.caption, color: c.accent },
   cardTitle: { ...theme.font.title, color: '#fff', marginTop: 3, fontSize: 21 },
   cardChips: { flexDirection: 'row', gap: 6, marginTop: 9, flexWrap: 'wrap' },
+
+  problems: {
+    marginHorizontal: theme.space(5),
+    marginTop: theme.space(6),
+    backgroundColor: c.surface,
+    borderRadius: theme.radius.md,
+    overflow: 'hidden',
+  },
+  problemsHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: theme.space(3),
+  },
+  problemsTitle: { ...theme.font.label, color: c.muted },
+  problemsChevron: { color: c.faint, fontSize: 15 },
+  problemRow: {
+    paddingHorizontal: theme.space(3),
+    paddingBottom: theme.space(3),
+  },
+  problemCourse: { ...theme.font.caption, letterSpacing: 0.2, color: c.text },
+  problemReason: { ...theme.font.caption, fontWeight: '500', letterSpacing: 0, color: c.faint },
 
   loading: { padding: theme.space(10), alignItems: 'center', gap: theme.space(4) },
   loadingText: { ...theme.font.body, color: c.muted, textAlign: 'center', lineHeight: 21 },

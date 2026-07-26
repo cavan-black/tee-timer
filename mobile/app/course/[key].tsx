@@ -14,43 +14,57 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { cachedSearch, type SearchResult, type TeeTime } from '../../src/api';
+import {
+  cachedSearch,
+  type Holes,
+  type SearchResult,
+  type TeeTime,
+  type Window,
+} from '../../src/api';
 import { Chip, CourseArt, Empty, TeeTimeRow } from '../../src/components';
+import { recall } from '../../src/store';
 import { fill, theme } from '../../src/theme';
 
 const c = theme.color;
 
 export default function CourseScreen() {
-  const { key, date } = useLocalSearchParams<{ key: string; date: string }>();
+  const { key, date, window, players, holes } = useLocalSearchParams<{
+    key: string;
+    date: string;
+    window?: Window;
+    players?: string;
+    holes?: Holes;
+  }>();
   const insets = useSafeAreaInsets();
   const [result, setResult] = React.useState<SearchResult | null>(null);
   const [ready, setReady] = React.useState(false);
 
-  // The list screen has already cached this exact search, so reuse it rather
-  // than re-scraping 45 booking engines to show one course.
   React.useEffect(() => {
     let live = true;
+    // Normally the list screen is still holding the exact result set.
+    const held = recall();
+    if (held?.result.teeTimes.some((t) => t.courseKey === key)) {
+      setResult(held.result);
+      setReady(true);
+      return;
+    }
+    // Cold start or deep link: one targeted lookup using the filters we were
+    // handed, rather than guessing across every filter combination.
     (async () => {
-      for (const w of ['any', 'morning', 'afternoon'] as const) {
-        for (const h of ['18', '9', 'both'] as const) {
-          for (const p of [1, 2, 3, 4]) {
-            const hit = await cachedSearch({ date: date!, window: w, players: p, holes: h });
-            if (hit?.teeTimes.some((t) => t.courseKey === key)) {
-              if (live) {
-                setResult(hit);
-                setReady(true);
-              }
-              return;
-            }
-          }
-        }
-      }
-      if (live) setReady(true);
+      const hit = await cachedSearch({
+        date: date!,
+        window: (window ?? 'any') as Window,
+        players: Number(players ?? 1),
+        holes: (holes ?? '18') as Holes,
+      });
+      if (!live) return;
+      if (hit) setResult(hit);
+      setReady(true);
     })();
     return () => {
       live = false;
     };
-  }, [key, date]);
+  }, [key, date, window, players, holes]);
 
   const times = React.useMemo(
     () => (result?.teeTimes ?? []).filter((t) => t.courseKey === key),
@@ -86,7 +100,7 @@ export default function CourseScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + theme.space(10) }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + theme.space(24) }}
         showsVerticalScrollIndicator={false}
       >
         <View style={s.hero}>
@@ -104,7 +118,13 @@ export default function CourseScreen() {
             <Text style={s.area}>{head.area.toUpperCase()}</Text>
             <Text style={s.title}>{head.label}</Text>
             <View style={s.chips}>
-              <Chip label={day.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} />
+              <Chip
+                label={day.toLocaleDateString('en-GB', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                })}
+              />
               <Chip label={`${times.length} tee times`} />
               <Chip label={`from €${cheapest.toFixed(0)}`} tone="accent" />
             </View>

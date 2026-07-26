@@ -43,7 +43,15 @@ app/
 src/
   api.ts             typed client, 90s ceiling, AsyncStorage cache
   components.tsx     course art, chips, price, tee-time + table rows
+  results.ts         pure grouping/sorting — unit tested
+  results.test.ts    node --test, via Node's built-in type stripping
+  store.ts           last result, shared between the two screens
   theme.ts           palette, type scale, spacing
+```
+
+```bash
+npm test        # pure logic, no test framework needed
+npm run typecheck
 ```
 
 ### Two ways to read the results
@@ -57,7 +65,16 @@ tee, course, rate, max players, price. Tapping a row opens the club's booking
 page directly. Use it when you know what you want and just need the cheapest
 slot at 8am.
 
-Toggle between them with the control above the results.
+Toggle between them with the control above the results. The table can be
+ordered by tee time or by price.
+
+Filter by area with the chips under the players stepper — "All areas" or any
+combination of the eight. Narrowing to one area also makes the search much
+faster, since it only queries that area's clubs.
+
+Courses that returned nothing are listed in a disclosure at the end of the
+results, with the reason for each (members-only, no rates published for that
+date, fully booked, or a genuine failure). Nothing is silently dropped.
 
 Notes:
 

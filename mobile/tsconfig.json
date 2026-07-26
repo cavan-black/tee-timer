@@ -1,7 +1,11 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // Unit tests run on Node's built-in runner with type stripping, which
+    // requires explicit .ts extensions on relative imports.
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
   },
   "include": [
     "**/*.ts",
