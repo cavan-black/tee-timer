@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -140,7 +140,7 @@ def search(
         "window": window,
         "players": players,
         "holes": holes,
-        "fetchedAt": datetime.utcnow().isoformat() + "Z",
+        "fetchedAt": datetime.now(timezone.utc).isoformat(),
         "coursesQueried": len(picked),
         "coursesWithSpace": len({t["courseKey"] for t in tee_times}),
         "teeTimes": tee_times,
