@@ -250,6 +250,19 @@ OVERRIDES: dict[str, str] = {
     "arqueros": "https://www.losarquerosgolf.com/wp-content/uploads/revslider/rsl11/lag-slider-5.jpg",
     "santaclaramarbella": "https://santaclaragolfmarbella.com/wp-content/uploads/2025/01/"
                           "santaclara_home_bg2.jpg",
+    # Harvested and checked by eye, then pinned here. These live in code rather
+    # than only in the manifest because tools/fetch_images.py both reads and
+    # rewrites the manifest -- an early version of it dropped these five.
+    "aloha": "https://www.clubdegolfaloha.com/wp-content/uploads/2021/04/The-course.jpg",
+    "atalaya": "https://www.atalaya-golf.com/wp-content/uploads/2019/10/Hole-7-OC.jpg",
+    "azata": "https://azatagolf.com/wp-content/uploads/2026/04/Azata-Golf-Hoyo-9.png",
+    "lauro": "https://www.laurogolf.com/wp-content/uploads/2015/05/IMG_3770-3-compressed1.jpg",
+    "sanroqueclub": "https://sanroqueclub.com/wp-content/uploads/2022/04/old-course2-1024x576.jpg",
+    "arqueros": "https://www.losarquerosgolf.com/wp-content/uploads/revslider/rsl11/lag-slider-5.jpg",
+    "brisas": "https://realclubdegolflasbrisas.com/wp-content/uploads/2022/03/RCGB-HOME-2.jpg",
+    "valleromano": "https://valleromanogolf.com/wp-content/uploads/2026/06/"
+                   "Hoyo-3-Valle-Romano-Golf-Resort-Estepona-Costa-del-Sol-1-2.jpg",
+
     # Supplied by hand. Both come off the Marbella Club group's own CDN, which
     # is a far steadier host than elhigueralgolf.com, whose TLS is broken.
     "marbellaclub": "https://image-tc.galaxy.tf/wijpeg-8n49iibxwoe5wkaqliy0mzu8y/"
@@ -287,6 +300,8 @@ REJECTED: set[str] = {
     "https://www.lacala.com/wp-content/uploads/2025/01/Sunrise_LCR-Custom-1024x614.jpg",
     # sponsors' backdrop group photo
     "https://santaclaragolfmarbella.com/wp-content/uploads/2026/06/schusterandfriends1.jpg",
+    # a boat moored on a marina -- Miraflores' og:image
+    "https://static.wixstatic.com/media/662272_9964259ec1ee45eeb9bed14fcf0e2348~mv2.jpg",
 }
 
 # Everything Miraflores serves statically from Wix is a screenshot of its own

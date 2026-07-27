@@ -24,7 +24,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from teetimer.courses import COURSES  # noqa: E402
-from tools.harvest_images import OVERRIDES  # noqa: E402
+from tools.harvest_images import OVERRIDES, _rejected  # noqa: E402
 
 requests.packages.urllib3.disable_warnings()
 
@@ -67,9 +67,9 @@ EXTRA: dict[str, str] = {
     "calanova": "https://www.calanovagolf.es/web/img/slides/slide-6.jpg",
     "almenara": "https://altogolfclub.com/wp-content/uploads/2024/06/"
                 "Almenara-Golf-–-the-Lagos-and-Pinos-Course.webp",
-    "miraflores": "https://static.wixstatic.com/media/"
-                  "662272_9964259ec1ee45eeb9bed14fcf0e2348~mv2.jpg/v1/fill/"
-                  "w_1500,h_997,q_90/662272_9964259ec1ee45eeb9bed14fcf0e2348~mv2.jpg",
+    # Miraflores stays absent. Its Wix gallery renders in JavaScript, and every
+    # image reachable statically has been wrong on inspection: a screenshot of
+    # its own home page, a group photo, and a boat moored on a marina.
     # Google Places photos. Signed URLs that rotate, which is precisely why we
     # save a copy rather than pointing the app at them.
     "paraiso": "https://lh3.googleusercontent.com/gps-cs-s/AHRPTWkNE-ErtCtqW70iLj-sV2Fa5c2I0q9G8"
@@ -92,7 +92,11 @@ def sources() -> dict[str, str]:
         known.update(json.loads(MANIFEST.read_text(encoding="utf-8")))
     known.update(OVERRIDES)
     known.update(EXTRA)
-    return known
+    # The manifest is both input and output here, so a URL rejected on sight
+    # would otherwise survive forever by being read back in.
+    return {k: v for k, v in known.items()
+            if not v.startswith("/api/") and not _rejected(v)
+            or (OUT / f"{k}.jpg").is_file()}
 
 
 def grab(item: tuple[str, str]) -> tuple[str, str]:

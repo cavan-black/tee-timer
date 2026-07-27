@@ -27,15 +27,25 @@ IMAGES = json.loads((ROOT / "assets" / "course_images.json").read_text(encoding=
 CLUB = {c.tenant: c.club for c in COURSES}
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126 Safari/537.36"}
 
-COLS, ROWS = 3, 3          # 9 per sheet keeps each tile big enough to judge
-TILE_W, TILE_H = 380, 214
+COLS, ROWS = 4, 3          # 9 per sheet keeps each tile big enough to judge
+TILE_W, TILE_H = 300, 172
 LABEL_H = 26
 BG = (11, 20, 16)
 INK = (234, 242, 238)
 
 
+SAVED = ROOT / "assets" / "courses"
+
+
 def grab(item: tuple[str, str]) -> tuple[str, Image.Image | None]:
     tenant, url = item
+    # Photos we host are on disk; anything still remote gets fetched.
+    local = SAVED / f"{tenant}.jpg"
+    if local.is_file():
+        try:
+            return tenant, Image.open(local).convert("RGB")
+        except Exception:
+            return tenant, None
     try:
         r = requests.get(url, headers=UA, timeout=40, verify=False)
         r.raise_for_status()
