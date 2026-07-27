@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from fastapi import FastAPI, HTTPException, Query, Response  # noqa: E402
+from fastapi.responses import FileResponse  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
 
@@ -95,6 +96,29 @@ def course_json(c) -> dict:
         "platform": c.platform,
         "image": IMAGES.get(c.tenant),
     }
+
+
+COURSE_IMAGES = ROOT / "assets" / "courses"
+
+
+@app.get("/api/image/{key}")
+def course_image(key: str, response: Response):
+    """Serve a downloaded course photo.
+
+    Saved copies mean the app never touches a club's server for imagery --
+    several began returning 403s or bot-challenge pages once we had fetched a
+    few times, and the Google-hosted URLs are signed and rotate.
+    """
+    if not key.isalnum():                      # the key is a tenant slug
+        raise HTTPException(404, "no such image")
+    path = COURSE_IMAGES / f"{key}.jpg"
+    if not path.is_file():
+        raise HTTPException(404, "no such image")
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=604800, immutable"},
+    )
 
 
 @app.get("/api/health")

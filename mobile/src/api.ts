@@ -69,6 +69,16 @@ export interface SearchParams {
   inland?: boolean;
 }
 
+/**
+ * Course photos we host ourselves come back as "/api/image/<key>"; the ones
+ * still hotlinked from a club come back absolute. Resolve the former against
+ * the API host so both kinds are usable straight from the payload.
+ */
+export function imageUrl(image: string | null | undefined): string | null {
+  if (!image) return null;
+  return image.startsWith('/') ? `${API_BASE}${image}` : image;
+}
+
 /** Thrown when the caller aborted, as opposed to anything going wrong. */
 export class SearchCancelled extends Error {
   constructor() {

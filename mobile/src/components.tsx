@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { GeneratedCourse } from './courseart';
 import { theme } from './theme';
-import type { TeeTime } from './api';
+import { imageUrl, type TeeTime } from './api';
 
 const c = theme.color;
 
@@ -31,12 +31,13 @@ export function CourseArt({
   scrim?: boolean;
 }) {
   const [failed, setFailed] = React.useState(false);
+  const uri = imageUrl(image);
 
-  if (image && !failed) {
+  if (uri && !failed) {
     return (
       <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
         <Image
-          source={{ uri: image }}
+          source={{ uri }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
           transition={260}
