@@ -250,6 +250,13 @@ OVERRIDES: dict[str, str] = {
     "arqueros": "https://www.losarquerosgolf.com/wp-content/uploads/revslider/rsl11/lag-slider-5.jpg",
     "santaclaramarbella": "https://santaclaragolfmarbella.com/wp-content/uploads/2025/01/"
                           "santaclara_home_bg2.jpg",
+    # Supplied by hand. Both come off the Marbella Club group's own CDN, which
+    # is a far steadier host than elhigueralgolf.com, whose TLS is broken.
+    "marbellaclub": "https://image-tc.galaxy.tf/wijpeg-8n49iibxwoe5wkaqliy0mzu8y/"
+                    "mbc-8-approach.jpg",
+    "elhigueral": "https://image-tc.galaxy.tf/wijpeg-5cymmyc4z0jpfpkxd7b9ax4w9/"
+                  "higueral-green-6.jpg",
+
     # Deliberately absent, all checked by eye and rejected:
     #   calanova   - the only scrapable "th-18" image is a clubhouse interior
     #   noria      - a flat drawn hole diagram, not a photograph
