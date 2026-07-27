@@ -1,0 +1,6 @@
+# Deps for the Vercel function only. Vercel's Python builder prefers the
+# requirements.txt next to the entrypoint over the one at the repo root, and
+# the root file carries streamlit + pandas for Streamlit Cloud — neither of
+# which api/index.py imports. Keeping them out cuts build time substantially.
+fastapi>=0.115
+requests>=2.32
