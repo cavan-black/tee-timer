@@ -19,6 +19,7 @@ import {
   cachedSearch,
   fetchCourses,
   search,
+  type Course,
   type Holes,
   type SearchResult,
   type TeeTime,
@@ -26,6 +27,7 @@ import {
 } from '../src/api';
 import { Chip, CourseArt, Empty, Price, TableHead, TableRow } from '../src/components';
 import { groupByCourse, rankProblems, sortTeeTimes, type Group, type SortBy } from '../src/results';
+import { SearchProgress, SkeletonCards, SkeletonRows } from '../src/skeleton';
 import { remember } from '../src/store';
 import { fill, theme } from '../src/theme';
 
@@ -77,6 +79,7 @@ export default function Home() {
   const [players, setPlayers] = React.useState(2);
   const [areas, setAreas] = React.useState<string[]>([]);
   const [allAreas, setAllAreas] = React.useState<string[]>([]);
+  const [allCourses, setAllCourses] = React.useState<Course[]>([]);
 
   const [view, setView] = React.useState<ViewMode>('cards');
   const [sortBy, setSortBy] = React.useState<SortBy>('time');
@@ -93,7 +96,10 @@ export default function Home() {
 
   React.useEffect(() => {
     fetchCourses()
-      .then((d) => setAllAreas(d.areas))
+      .then((d) => {
+        setAllAreas(d.areas);
+        setAllCourses(d.courses);
+      })
       .catch(() => {}); // area chips are a refinement; the search works without them
   }, []);
 
@@ -359,12 +365,23 @@ export default function Home() {
       </View>
     ) : null;
 
+  // How many clubs this search will actually hit, so the wait is explained
+  // rather than just endured. Falls back to the full corridor before the
+  // course list has loaded.
+  const querying = React.useMemo(() => {
+    if (!allCourses.length) return areas.length ? 0 : 45;
+    return allCourses.filter(
+      (x) =>
+        x.corridor &&
+        (holes !== '18' || x.holes === 18) &&
+        (areas.length === 0 || areas.includes(x.area)),
+    ).length;
+  }, [allCourses, areas, holes]);
+
   const empty = loading ? (
-    <View style={s.loading}>
-      <ActivityIndicator color={c.accent} />
-      <Text style={s.loadingText}>
-        Checking every booking engine from Sotogrande to Fuengirola…
-      </Text>
+    <View>
+      <SearchProgress courses={querying} />
+      {view === 'table' ? <SkeletonRows /> : <SkeletonCards />}
     </View>
   ) : result ? (
     <Empty
