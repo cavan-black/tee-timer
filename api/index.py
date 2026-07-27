@@ -9,13 +9,16 @@ from __future__ import annotations
 
 import json
 import sys
+import time
+from collections import OrderedDict
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+from threading import Lock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from fastapi import FastAPI, HTTPException, Query  # noqa: E402
+from fastapi import FastAPI, HTTPException, Query, Response  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
 
@@ -40,6 +43,45 @@ app.add_middleware(
 WINDOWS = {"any", "morning", "afternoon"}
 MAX_AHEAD = 180
 
+# --- Caching ---------------------------------------------------------------
+# One search fans out to ~45 clubs' booking systems, and Miraflores alone costs
+# about twenty requests. Repeating that for every tap would be inconsiderate to
+# the clubs and slow for us, so results are cached briefly at two levels:
+#
+#   1. Vercel's CDN, via Cache-Control. Identical queries never reach the
+#      function at all -- this is what actually spares the clubs, since it is
+#      shared across every user and every instance.
+#   2. This process, for when the CDN misses but the instance is warm.
+#
+# Five minutes is short enough that a slot taken in the meantime is unlikely,
+# and every response carries `fetchedAt` so the client can show its true age.
+CACHE_TTL = 300
+CACHE_MAX = 64
+
+_cache: OrderedDict[tuple, tuple[float, dict]] = OrderedDict()
+_cache_lock = Lock()
+
+
+def _cache_get(key: tuple) -> dict | None:
+    with _cache_lock:
+        hit = _cache.get(key)
+        if hit is None:
+            return None
+        stored_at, payload = hit
+        if time.monotonic() - stored_at > CACHE_TTL:
+            _cache.pop(key, None)
+            return None
+        _cache.move_to_end(key)
+        return payload
+
+
+def _cache_put(key: tuple, payload: dict) -> None:
+    with _cache_lock:
+        _cache[key] = (time.monotonic(), payload)
+        _cache.move_to_end(key)
+        while len(_cache) > CACHE_MAX:
+            _cache.popitem(last=False)
+
 
 def course_json(c) -> dict:
     return {
@@ -63,7 +105,9 @@ def health() -> dict:
 
 
 @app.get("/api/courses")
-def courses() -> dict:
+def courses(response: Response) -> dict:
+    # The registry only changes when a club switches booking platform.
+    response.headers["Cache-Control"] = "public, s-maxage=3600, stale-while-revalidate=86400"
     return {
         "areas": AREAS,
         "courses": [course_json(c) for c in COURSES],
@@ -72,6 +116,7 @@ def courses() -> dict:
 
 @app.get("/api/search")
 def search(
+    response: Response,
     day: str = Query(..., alias="date", description="YYYY-MM-DD"),
     window: str = Query("any"),
     players: int = Query(1, ge=1, le=4),
@@ -89,6 +134,19 @@ def search(
     today = date.today()
     if not today <= wanted <= today + timedelta(days=MAX_AHEAD):
         raise HTTPException(400, f"date must be within {MAX_AHEAD} days from today")
+
+    # Cache before any scraping. Set on every path so a CDN hit and a miss are
+    # cached identically; stale-while-revalidate keeps the app snappy while a
+    # fresh scrape runs behind it.
+    response.headers["Cache-Control"] = (
+        f"public, s-maxage={CACHE_TTL}, stale-while-revalidate={CACHE_TTL * 2}"
+    )
+    key = (wanted, window, players, holes, areas or "", inland, restricted)
+    cached = _cache_get(key)
+    if cached is not None:
+        response.headers["X-Cache"] = "HIT"
+        return cached
+    response.headers["X-Cache"] = "MISS"
 
     picked = [c for c in COURSES if c.corridor or inland]
     if holes == "18":
@@ -135,7 +193,7 @@ def search(
             })
 
     tee_times.sort(key=lambda x: (x["time"], x["price"]))
-    return {
+    payload = {
         "date": wanted.isoformat(),
         "window": window,
         "players": players,
@@ -146,3 +204,5 @@ def search(
         "teeTimes": tee_times,
         "problems": problems,
     }
+    _cache_put(key, payload)
+    return payload

@@ -69,6 +69,16 @@ function shortArea(area: string) {
   return area.split(' / ')[0].replace(' (Alhaurín)', '');
 }
 
+/** Results can be served from a short server-side cache, so say how old they
+ *  actually are rather than implying everything is live to the second. */
+function freshness(result: SearchResult): string {
+  if (result.fromCache) return 'Offline copy — pull down to refresh';
+  const ageMs = Date.now() - new Date(result.fetchedAt).getTime();
+  const mins = Math.floor(ageMs / 60000);
+  if (!Number.isFinite(mins) || mins < 1) return 'Prices read just now';
+  return `Prices read ${mins} min${mins === 1 ? '' : 's'} ago`;
+}
+
 export default function Home() {
   const insets = useSafeAreaInsets();
   const days = React.useMemo(() => nextDays(28), []);
@@ -303,6 +313,8 @@ export default function Home() {
             />
           </View>
 
+          <Text style={s.freshness}>{freshness(result)}</Text>
+
           <View style={s.viewBar}>
             {view === 'table' ? (
               <View style={s.sort}>
@@ -314,8 +326,6 @@ export default function Home() {
                   </Pressable>
                 ))}
               </View>
-            ) : result.fromCache ? (
-              <Chip label="offline copy" tone="deal" />
             ) : (
               <View />
             )}
@@ -614,6 +624,14 @@ const s = StyleSheet.create({
   statLabel: { ...theme.font.caption, color: c.faint },
   statValue: { ...theme.font.title, color: c.text, marginTop: 2 },
 
+  freshness: {
+    ...theme.font.caption,
+    fontWeight: '500',
+    letterSpacing: 0,
+    color: c.faint,
+    paddingHorizontal: theme.space(5),
+    paddingTop: theme.space(2),
+  },
   viewBar: {
     flexDirection: 'row',
     alignItems: 'center',
