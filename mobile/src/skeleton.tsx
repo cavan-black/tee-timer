@@ -85,61 +85,125 @@ export function SkeletonRows({ count = 8 }: { count?: number }) {
   );
 }
 
-/** Counts up while the search runs, so a long wait still feels alive. */
-export function SearchProgress({ courses }: { courses: number }) {
-  const [elapsed, setElapsed] = React.useState(0);
+/**
+ * Roughly how long this search will take. Measured: ~2s of fixed overhead plus
+ * ~350ms per course, so five courses land in about 4s and the whole corridor
+ * in about 17s.
+ */
+function estimateMs(courses: number) {
+  return 2000 + Math.max(courses, 1) * 350;
+}
+
+/**
+ * Progress bar for the search.
+ *
+ * The API answers once, at the end — there is no per-course progress to
+ * report. So this is an *estimate*: it eases toward the measured typical
+ * duration and deliberately stalls at 92%, because the one thing a progress
+ * bar must never do is sit at 100% while the user is still waiting. It
+ * completes only when the data actually arrives.
+ */
+function ProgressBar({
+  courses,
+  done,
+  onFinished,
+}: {
+  courses: number;
+  /** Data has arrived — run to the end. */
+  done?: boolean;
+  onFinished?: () => void;
+}) {
+  const grow = React.useRef(new Animated.Value(0)).current;
+  const sheen = React.useRef(new Animated.Value(0)).current;
+  const [width, setWidth] = React.useState(0);
+
   React.useEffect(() => {
-    const started = Date.now();
-    const id = setInterval(() => setElapsed(Math.round((Date.now() - started) / 1000)), 500);
-    return () => clearInterval(id);
-  }, []);
+    Animated.timing(grow, {
+      toValue: 0.92,
+      duration: estimateMs(courses),
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false, // animating width, not a transform
+    }).start();
+  }, [grow, courses]);
+
+  React.useEffect(() => {
+    if (!done) return;
+    const finish = Animated.timing(grow, {
+      toValue: 1,
+      duration: 260,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: false,
+    });
+    finish.start(({ finished }) => {
+      if (finished) onFinished?.();
+    });
+    return () => finish.stop();
+  }, [done, grow, onFinished]);
+
+  React.useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(sheen, {
+        toValue: 1,
+        duration: 1400,
+        easing: Easing.inOut(Easing.quad),
+        useNativeDriver: true,
+      }),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [sheen]);
 
   return (
-    <View style={s.progress}>
-      <View style={s.dotRow}>
-        <Dot delay={0} />
-        <Dot delay={160} />
-        <Dot delay={320} />
-      </View>
-      <Text style={s.title}>
-        Checking {courses} course{courses === 1 ? '' : 's'}
-      </Text>
-      <Text style={s.body}>
-        Reading each club's own booking system — nothing is cached, so these are
-        the prices they're selling right now.
-      </Text>
-      <Text style={s.timer}>{elapsed}s</Text>
+    <View style={s.track} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <Animated.View
+        style={[
+          s.fill,
+          { width: grow.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) },
+        ]}
+      >
+        {width > 0 && (
+          <Animated.View
+            style={[
+              s.sheen,
+              {
+                transform: [
+                  {
+                    translateX: sheen.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-90, width],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        )}
+      </Animated.View>
     </View>
   );
 }
 
-function Dot({ delay }: { delay: number }) {
-  const v = React.useRef(new Animated.Value(0)).current;
-  React.useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(v, { toValue: 1, duration: 420, useNativeDriver: true }),
-        Animated.timing(v, { toValue: 0, duration: 420, useNativeDriver: true }),
-        Animated.delay(480 - delay),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [v, delay]);
-
+/** Explains the wait while the search runs, rather than just enduring it. */
+export function SearchProgress({
+  courses,
+  done,
+  onFinished,
+}: {
+  courses: number;
+  done?: boolean;
+  onFinished?: () => void;
+}) {
   return (
-    <Animated.View
-      style={[
-        s.dot,
-        {
-          opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] }),
-          transform: [
-            { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) },
-          ],
-        },
-      ]}
-    />
+    <View style={s.progress}>
+      <Text style={s.title}>
+        {done ? 'Almost there' : `Checking ${courses} course${courses === 1 ? '' : 's'}`}
+      </Text>
+      <Text style={s.body}>
+        Reading each club's own booking system for the prices they're selling
+        right now.
+      </Text>
+      <ProgressBar courses={courses} done={done} onFinished={onFinished} />
+    </View>
   );
 }
 
@@ -174,8 +238,27 @@ const s = StyleSheet.create({
     paddingTop: theme.space(7),
     paddingBottom: theme.space(2),
   },
-  dotRow: { flexDirection: 'row', gap: 7, marginBottom: theme.space(4) },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: c.accent },
+  track: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    marginTop: theme.space(5),
+    overflow: 'hidden',
+  },
+  fill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: c.accent,
+    overflow: 'hidden',
+  },
+  sheen: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 90,
+    backgroundColor: 'rgba(255,255,255,0.38)',
+  },
   title: { ...theme.font.title, color: c.text },
   body: {
     ...theme.font.body,

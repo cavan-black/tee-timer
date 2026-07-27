@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
-import { clubHue, theme } from './theme';
+import { GeneratedCourse } from './courseart';
+import { theme } from './theme';
 import type { TeeTime } from './api';
 
 const c = theme.color;
@@ -30,7 +31,6 @@ export function CourseArt({
   scrim?: boolean;
 }) {
   const [failed, setFailed] = React.useState(false);
-  const hue = clubHue(seed);
 
   if (image && !failed) {
     return (
@@ -54,42 +54,8 @@ export function CourseArt({
     );
   }
 
-  return (
-    <View style={[{ borderRadius: radius, overflow: 'hidden' }, style]}>
-      <LinearGradient
-        colors={[
-          `hsl(${hue}, 44%, 40%)`,
-          `hsl(${(hue + 38) % 360}, 48%, 26%)`,
-          `hsl(${(hue + 70) % 360}, 44%, 16%)`,
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* suggestion of fairway contours */}
-      <View style={[s.blob, { backgroundColor: `hsl(${hue}, 58%, 56%)`, opacity: 0.3 }]} />
-      <View
-        style={[
-          s.blob,
-          {
-            backgroundColor: `hsl(${(hue + 60) % 360}, 52%, 62%)`,
-            opacity: 0.22,
-            left: -40,
-            top: 30,
-            width: 150,
-            height: 150,
-          },
-        ]}
-      />
-      {scrim && (
-        <LinearGradient
-          colors={['transparent', 'rgba(3,10,7,0.72)']}
-          locations={[0.35, 1]}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-    </View>
-  );
+  // No usable photo from the club: draw the course instead of leaving a hole.
+  return <GeneratedCourse seed={seed} style={style} radius={radius} />;
 }
 
 export function Chip({

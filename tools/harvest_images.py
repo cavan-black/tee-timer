@@ -250,6 +250,13 @@ OVERRIDES: dict[str, str] = {
     "arqueros": "https://www.losarquerosgolf.com/wp-content/uploads/revslider/rsl11/lag-slider-5.jpg",
     "santaclaramarbella": "https://santaclaragolfmarbella.com/wp-content/uploads/2025/01/"
                           "santaclara_home_bg2.jpg",
+    # Deliberately absent, all checked by eye and rejected:
+    #   calanova   - the only scrapable "th-18" image is a clubhouse interior
+    #   noria      - a flat drawn hole diagram, not a photograph
+    #   elhigueral - its one course photo sits behind a broken TLS handshake,
+    #                so a phone could not load it either
+    # These fall back to the drawn course scene, like the other clubs whose
+    # sites publish nothing usable.
     # Miraflores is deliberately absent: its Wix site renders the gallery in
     # JavaScript, so nothing reachable statically is actually the course --
     # every candidate was a screenshot, a group photo, or a portrait. It gets

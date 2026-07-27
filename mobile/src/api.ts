@@ -69,9 +69,23 @@ export interface SearchParams {
   inland?: boolean;
 }
 
+/** Thrown when the caller aborted, as opposed to anything going wrong. */
+export class SearchCancelled extends Error {
+  constructor() {
+    super('Search cancelled');
+    this.name = 'SearchCancelled';
+  }
+}
+
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  // Both the timeout and the caller abort the same controller, so the reason
+  // has to be tracked separately -- otherwise a cancel looks like a timeout.
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, TIMEOUT_MS);
   signal?.addEventListener('abort', () => controller.abort());
   try {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -90,6 +104,7 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
     return (await res.json()) as T;
   } catch (err: any) {
     if (err?.name === 'AbortError') {
+      if (!timedOut) throw new SearchCancelled();
       throw new Error("That took too long — the clubs' booking engines are slow right now.");
     }
     if (err instanceof TypeError) {

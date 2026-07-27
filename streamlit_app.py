@@ -122,7 +122,7 @@ homescreen.apply("Tee Timer")
 
 st.title("⛳ Tee Timer")
 st.caption("Live availability and prices, straight from each club's own booking "
-           "engine — Sotogrande to Fuengirola.")
+           "engine — across the Costa del Sol.")
 
 if go:
     st.session_state["query"] = (tuple(c.key for c in pool), day, window, players)

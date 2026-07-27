@@ -19,6 +19,7 @@ import {
   cachedSearch,
   fetchCourses,
   search,
+  SearchCancelled,
   type Course,
   type Holes,
   type SearchResult,
@@ -95,6 +96,8 @@ export default function Home() {
   const [sortBy, setSortBy] = React.useState<SortBy>('time');
 
   const [result, setResult] = React.useState<SearchResult | null>(null);
+  // Arrived, but held back until the progress bar has run to 100%.
+  const [pending, setPending] = React.useState<SearchResult | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [showProblems, setShowProblems] = React.useState(false);
@@ -113,14 +116,42 @@ export default function Home() {
       .catch(() => {}); // area chips are a refinement; the search works without them
   }, []);
 
+  const inflight = React.useRef<AbortController | null>(null);
+
+  const cancel = React.useCallback(() => {
+    inflight.current?.abort();
+    inflight.current = null;
+    setPending(null);
+    setLoading(false);
+  }, []);
+
+  /** Called once the bar reaches 100%; only then do the results appear. */
+  const commit = React.useCallback(() => {
+    if (!pending) return;
+    setResult(pending);
+    remember(params, pending);
+    setPending(null);
+    setLoading(false);
+    inflight.current = null;
+  }, [pending, params]);
+
   const run = React.useCallback(async () => {
+    inflight.current?.abort(); // never let two searches race
+    const controller = new AbortController();
+    inflight.current = controller;
+
     setLoading(true);
     setError(null);
+    setPending(null);
     try {
-      const fresh = await search(params);
-      setResult(fresh);
-      remember(params, fresh);
+      const fresh = await search(params, controller.signal);
+      if (controller.signal.aborted) return;
+      // Hand off to the progress bar: it runs to 100%, then commits. Snapping
+      // results in while the bar sits at 92% looks like it gave up.
+      setPending(fresh);
+      return;
     } catch (err: any) {
+      if (err instanceof SearchCancelled || controller.signal.aborted) return;
       setError(err?.message ?? 'Something went wrong.');
       const fallback = await cachedSearch(params);
       if (fallback) {
@@ -128,14 +159,23 @@ export default function Home() {
         remember(params, fallback);
       }
     } finally {
-      setLoading(false);
+      // On the success path `pending` owns the handoff, so only clear down
+      // here when we failed or were superseded.
+      if (inflight.current === controller) {
+        inflight.current = null;
+        setLoading(false);
+      }
     }
   }, [params]);
+
 
   // Show any cached result for these filters immediately, but don't auto-fetch:
   // one search is real load on ~45 clubs' booking systems.
   React.useEffect(() => {
     let live = true;
+    // Changing a filter abandons any search in flight rather than letting a
+    // stale one land over the new filters.
+    cancel();
     setResult(null);
     setError(null);
     setShowProblems(false);
@@ -148,7 +188,7 @@ export default function Home() {
     return () => {
       live = false;
     };
-  }, [params]);
+  }, [params, cancel]);
 
   const groups = React.useMemo(
     () => (result ? groupByCourse(result.teeTimes) : []),
@@ -162,6 +202,19 @@ export default function Home() {
     () => (result ? rankProblems(result.problems) : []),
     [result],
   );
+
+  // How many clubs this search will actually hit, so the wait is explained
+  // rather than just endured. Falls back to the full corridor before the
+  // course list has loaded.
+  const querying = React.useMemo(() => {
+    if (!allCourses.length) return 45;
+    return allCourses.filter(
+      (x) =>
+        x.corridor &&
+        (holes !== '18' || x.holes === 18) &&
+        (areas.length === 0 || areas.includes(x.area)),
+    ).length;
+  }, [allCourses, areas, holes]);
 
   const tap = (fn: () => void) => () => {
     Haptics.selectionAsync().catch(() => {});
@@ -189,7 +242,7 @@ export default function Home() {
   const header = (
     <View style={{ paddingTop: insets.top + theme.space(3) }}>
       <View style={s.header}>
-        <Text style={s.kicker}>SOTOGRANDE → FUENGIROLA</Text>
+        <Text style={s.kicker}>COSTA DEL SOL</Text>
         <Text style={s.h1}>Tee Timer</Text>
       </View>
 
@@ -278,18 +331,26 @@ export default function Home() {
 
       <View style={s.ctaWrap}>
         <Pressable
-          onPress={tap(run)}
-          disabled={loading}
-          style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
+          onPress={tap(loading ? cancel : run)}
+          style={({ pressed }) => [
+            s.cta,
+            loading && s.ctaCancel,
+            pressed && { opacity: 0.85 },
+          ]}
           accessibilityRole="button"
+          accessibilityLabel={loading ? 'Cancel search' : 'Find tee times'}
         >
-          {loading ? (
-            <ActivityIndicator color={c.accentInk} />
-          ) : (
-            <Text style={s.ctaText}>Find tee times</Text>
-          )}
+          <Text style={[s.ctaText, loading && s.ctaCancelText]}>
+            {loading ? 'Cancel' : 'Find tee times'}
+          </Text>
         </Pressable>
       </View>
+
+      {/* In the header, not the empty slot: a cached result is usually already
+          on screen, and the search still needs to show it is working. */}
+      {loading && (
+        <SearchProgress courses={querying} done={!!pending} onFinished={commit} />
+      )}
 
       {error && (
         <View style={s.error}>
@@ -375,24 +436,8 @@ export default function Home() {
       </View>
     ) : null;
 
-  // How many clubs this search will actually hit, so the wait is explained
-  // rather than just endured. Falls back to the full corridor before the
-  // course list has loaded.
-  const querying = React.useMemo(() => {
-    if (!allCourses.length) return areas.length ? 0 : 45;
-    return allCourses.filter(
-      (x) =>
-        x.corridor &&
-        (holes !== '18' || x.holes === 18) &&
-        (areas.length === 0 || areas.includes(x.area)),
-    ).length;
-  }, [allCourses, areas, holes]);
-
   const empty = loading ? (
-    <View>
-      <SearchProgress courses={querying} />
-      {view === 'table' ? <SkeletonRows /> : <SkeletonCards />}
-    </View>
+    view === 'table' ? <SkeletonRows /> : <SkeletonCards />
   ) : result ? (
     <Empty
       title="Nothing free"
@@ -597,6 +642,14 @@ const s = StyleSheet.create({
     ...theme.shadow.card,
   },
   ctaText: { ...theme.font.title, color: c.accentInk },
+  ctaCancel: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: c.lineStrong,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  ctaCancelText: { color: c.muted },
 
   error: {
     marginHorizontal: theme.space(5),
