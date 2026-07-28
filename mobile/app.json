@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "scheme": "teetimer",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "backgroundColor": "#07120D",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -25,7 +25,8 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": []
     },
     "web": {
       "favicon": "./assets/favicon.png"

@@ -128,6 +128,21 @@ def course_image(key: str, response: Response):
     )
 
 
+@app.get("/privacy")
+def privacy(response: Response):
+    """Google Play requires a privacy policy at a public URL, and it has to
+    stay reachable for as long as the app is listed. Serving it from the API we
+    already run means there is no second thing to keep alive."""
+    path = ROOT / "web" / "privacy.html"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="not found")
+    return FileResponse(
+        path,
+        media_type="text/html; charset=utf-8",
+        headers={"Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400"},
+    )
+
+
 @app.get("/api/health")
 def health() -> dict:
     return {"ok": True, "courses": len(COURSES),
