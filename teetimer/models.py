@@ -103,12 +103,19 @@ def rate_holes(rate_name: str, course_holes: int) -> int:
     return course_holes
 
 
+# Clubs here sell discounted "twilight" rounds from mid-afternoon, when there
+# is still just enough light for eighteen holes. 15:00 is the common cut.
+TWILIGHT_FROM = time(15, 0)
+
+
 def in_window(t: time, window: str) -> bool:
-    """`window` is one of 'any', 'morning', 'afternoon'."""
+    """`window` is one of 'any', 'morning', 'afternoon', 'twilight'."""
     if window == "morning":
         return t < time(12, 0)
     if window == "afternoon":
         return t >= time(12, 0)
+    if window == "twilight":
+        return t >= TWILIGHT_FROM
     return True
 
 
@@ -118,6 +125,8 @@ def window_bounds(window: str) -> tuple[str, str]:
         return "6:00", "12:00"
     if window == "afternoon":
         return "12:01", "22:00"
+    if window == "twilight":
+        return "15:00", "22:00"
     return "6:00", "22:00"
 
 

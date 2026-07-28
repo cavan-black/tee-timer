@@ -30,15 +30,18 @@ import { Chip, CourseArt, Empty, Price, TableHead, TableRow } from '../src/compo
 import { groupByCourse, rankProblems, sortTeeTimes, type Group, type SortBy } from '../src/results';
 import { SearchProgress, SkeletonCards, SkeletonRows } from '../src/skeleton';
 import { remember } from '../src/store';
+import { Tutorial, useTutorial } from '../src/tutorial';
 import { fill, theme, useTheme, type Palette } from '../src/theme';
 
 const CARD_H = 208;
 const CARD_GAP = theme.space(3);
 
 const WINDOWS: { key: Window; label: string }[] = [
-  { key: 'any', label: 'Any time' },
+  { key: 'any', label: 'Any' },
   { key: 'morning', label: 'Morning' },
   { key: 'afternoon', label: 'Afternoon' },
+  // Discounted late rounds; the engine treats this as 15:00 onwards.
+  { key: 'twilight', label: 'Twilight' },
 ];
 const HOLES: { key: Holes; label: string }[] = [
   { key: '18', label: '18 holes' },
@@ -82,6 +85,7 @@ export default function Home() {
   const { colors: c, name: themeName, toggle: toggleTheme } = useTheme();
   const s = useStyles(c);
   const insets = useSafeAreaInsets();
+  const tutorial = useTutorial();
   const days = React.useMemo(() => nextDays(28), []);
 
   const [date, setDate] = React.useState(iso(days[1] ?? days[0]));
@@ -248,15 +252,26 @@ export default function Home() {
           <Text style={s.kicker}>COSTA DEL SOL</Text>
           <Text style={s.h1}>Tee Timer</Text>
         </View>
-        <Pressable
-          onPress={tap(toggleTheme)}
-          style={s.themeToggle}
-          hitSlop={10}
-          accessibilityRole="button"
-          accessibilityLabel={themeName === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          <Text style={s.themeGlyph}>{themeName === 'dark' ? '☀' : '☾'}</Text>
-        </Pressable>
+        <View style={s.headerButtons}>
+          <Pressable
+            onPress={tap(tutorial.open)}
+            style={s.iconButton}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="How it works"
+          >
+            <Text style={s.iconGlyph}>?</Text>
+          </Pressable>
+          <Pressable
+            onPress={tap(toggleTheme)}
+            style={s.iconButton}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={themeName === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <Text style={s.iconGlyph}>{themeName === 'dark' ? '☀' : '☾'}</Text>
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -466,6 +481,7 @@ export default function Home() {
   if (view === 'table') {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
+        <Tutorial visible={tutorial.visible} onClose={tutorial.close} />
         <FlatList
           data={rows}
           keyExtractor={(t, i) => `${t.courseKey}-${t.time}-${i}`}
@@ -487,6 +503,7 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <Tutorial visible={tutorial.visible} onClose={tutorial.close} />
       <FlatList
         data={groups}
         keyExtractor={(g) => g.key}
@@ -593,17 +610,17 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     paddingHorizontal: theme.space(5),
     paddingBottom: theme.space(3),
   },
-  themeToggle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+  headerButtons: { flexDirection: 'row', gap: theme.space(2), alignItems: 'center' },
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: c.surface,
-    borderWidth: 1,
-    borderColor: c.line,
+    // No fill or border: these are secondary to the search, and a bright pill
+    // in the corner pulled the eye away from it.
   },
-  themeGlyph: { fontSize: 18, color: c.text },
+  iconGlyph: { fontSize: 17, color: c.muted },
   kicker: { ...theme.font.caption, color: c.accent, marginBottom: 4 },
   h1: { ...theme.font.display, color: c.text },
 

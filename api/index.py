@@ -41,7 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-WINDOWS = {"any", "morning", "afternoon"}
+WINDOWS = {"any", "morning", "afternoon", "twilight"}
 MAX_AHEAD = 180
 
 # --- Caching ---------------------------------------------------------------

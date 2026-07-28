@@ -14,7 +14,8 @@ from teetimer.models import is_restricted, rate_holes
 st.set_page_config(page_title="Tee Timer — Costa del Sol", page_icon="⛳",
                    layout="wide", initial_sidebar_state="auto")
 
-WINDOWS = {"Any time": "any", "Morning": "morning", "Afternoon": "afternoon"}
+WINDOWS = {"Any time": "any", "Morning": "morning",
+           "Afternoon": "afternoon", "Twilight": "twilight"}
 PAGE = 60
 
 
@@ -137,7 +138,8 @@ if not query:
     st.stop()
 
 keys, q_day, q_window, q_players = query
-label = {"any": "any time", "morning": "the morning", "afternoon": "the afternoon"}[q_window]
+label = {"any": "any time", "morning": "the morning",
+         "afternoon": "the afternoon", "twilight": "twilight"}[q_window]
 
 with st.spinner(f"Checking {len(keys)} courses for {q_day:%a %d %b}…"):
     results = search(keys, q_day, q_window, q_players)

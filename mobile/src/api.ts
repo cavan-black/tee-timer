@@ -14,7 +14,7 @@ export const API_BASE = (
 const TIMEOUT_MS = 90_000;
 const CACHE_PREFIX = 'teetimer:v1:';
 
-export type Window = 'any' | 'morning' | 'afternoon';
+export type Window = 'any' | 'morning' | 'afternoon' | 'twilight';
 export type Holes = '9' | '18' | 'both';
 
 export interface Course {
