@@ -137,7 +137,13 @@ function ProgressBar({
     finish.start(({ finished }) => {
       if (finished) onFinished?.();
     });
-    return () => finish.stop();
+    // The results are gated behind this callback, so never let a stopped or
+    // dropped animation strand the caller in a permanent loading state.
+    const safety = setTimeout(() => onFinished?.(), 900);
+    return () => {
+      finish.stop();
+      clearTimeout(safety);
+    };
   }, [done, grow, onFinished]);
 
   React.useEffect(() => {

@@ -143,11 +143,15 @@ export default function Home() {
     setLoading(true);
     setError(null);
     setPending(null);
+    // On success the progress bar owns the rest of the handoff, so `finally`
+    // must not tear the loading state down underneath it.
+    let handedOff = false;
     try {
       const fresh = await search(params, controller.signal);
       if (controller.signal.aborted) return;
       // Hand off to the progress bar: it runs to 100%, then commits. Snapping
       // results in while the bar sits at 92% looks like it gave up.
+      handedOff = true;
       setPending(fresh);
       return;
     } catch (err: any) {
@@ -159,9 +163,7 @@ export default function Home() {
         remember(params, fallback);
       }
     } finally {
-      // On the success path `pending` owns the handoff, so only clear down
-      // here when we failed or were superseded.
-      if (inflight.current === controller) {
+      if (inflight.current === controller && !handedOff) {
         inflight.current = null;
         setLoading(false);
       }
