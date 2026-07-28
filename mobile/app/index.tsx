@@ -27,6 +27,8 @@ import {
   type Window,
 } from '../src/api';
 import { Chip, CourseArt, Empty, Price, TableHead, TableRow } from '../src/components';
+import { useI18n, type I18nState } from '../src/i18n';
+import { LanguageButton } from '../src/language';
 import { groupByCourse, rankProblems, sortTeeTimes, type Group, type SortBy } from '../src/results';
 import { SearchProgress, SkeletonCards, SkeletonRows } from '../src/skeleton';
 import { remember } from '../src/store';
@@ -36,18 +38,15 @@ import { fill, theme, useTheme, type Palette } from '../src/theme';
 const CARD_H = 208;
 const CARD_GAP = theme.space(3);
 
-const WINDOWS: { key: Window; label: string }[] = [
-  { key: 'any', label: 'Any' },
-  { key: 'morning', label: 'Morning' },
-  { key: 'afternoon', label: 'Afternoon' },
+// Labels are resolved at render time so switching language re-labels them.
+const WINDOWS: Window[] = [
+  'any',
+  'morning',
+  'afternoon',
   // Discounted late rounds; the engine treats this as 15:00 onwards.
-  { key: 'twilight', label: 'Twilight' },
+  'twilight',
 ];
-const HOLES: { key: Holes; label: string }[] = [
-  { key: '18', label: '18 holes' },
-  { key: '9', label: '9 holes' },
-  { key: 'both', label: 'Both' },
-];
+const HOLES: Holes[] = ['18', '9', 'both'];
 
 type ViewMode = 'cards' | 'table';
 
@@ -73,16 +72,17 @@ function shortArea(area: string) {
 
 /** Results can be served from a short server-side cache, so say how old they
  *  actually are rather than implying everything is live to the second. */
-function freshness(result: SearchResult): string {
-  if (result.fromCache) return 'Offline copy — pull down to refresh';
+function freshness(result: SearchResult, t: I18nState['t']): string {
+  if (result.fromCache) return t('fresh.offline');
   const ageMs = Date.now() - new Date(result.fetchedAt).getTime();
   const mins = Math.floor(ageMs / 60000);
-  if (!Number.isFinite(mins) || mins < 1) return 'Prices read just now';
-  return `Prices read ${mins} min${mins === 1 ? '' : 's'} ago`;
+  if (!Number.isFinite(mins) || mins < 1) return t('fresh.now');
+  return t('fresh.ago', { count: mins });
 }
 
 export default function Home() {
   const { colors: c, name: themeName, toggle: toggleTheme } = useTheme();
+  const { t, locale } = useI18n();
   const s = useStyles(c);
   const insets = useSafeAreaInsets();
   const tutorial = useTutorial();
@@ -160,7 +160,7 @@ export default function Home() {
       return;
     } catch (err: any) {
       if (err instanceof SearchCancelled || controller.signal.aborted) return;
-      setError(err?.message ?? 'Something went wrong.');
+      setError(err?.message ?? t('error.generic'));
       const fallback = await cachedSearch(params);
       if (fallback) {
         setResult(fallback);
@@ -172,7 +172,7 @@ export default function Home() {
         setLoading(false);
       }
     }
-  }, [params]);
+  }, [params, t]);
 
 
   // Show any cached result for these filters immediately, but don't auto-fetch:
@@ -249,7 +249,7 @@ export default function Home() {
     <View style={{ paddingTop: insets.top + theme.space(3) }}>
       <View style={s.header}>
         <View style={{ flex: 1 }}>
-          <Text style={s.kicker}>COSTA DEL SOL</Text>
+          <Text style={s.kicker}>{t('app.kicker')}</Text>
           <Text style={s.h1}>Tee Timer</Text>
         </View>
         <View style={s.headerButtons}>
@@ -258,16 +258,17 @@ export default function Home() {
             style={s.iconButton}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel="How it works"
+            accessibilityLabel={t('a11y.help')}
           >
             <Text style={s.iconGlyph}>?</Text>
           </Pressable>
+          <LanguageButton />
           <Pressable
             onPress={tap(toggleTheme)}
             style={s.iconButton}
             hitSlop={10}
             accessibilityRole="button"
-            accessibilityLabel={themeName === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            accessibilityLabel={t(themeName === 'dark' ? 'a11y.toLight' : 'a11y.toDark')}
           >
             <Text style={s.iconGlyph}>{themeName === 'dark' ? '☀' : '☾'}</Text>
           </Pressable>
@@ -291,11 +292,11 @@ export default function Home() {
               accessibilityState={{ selected: active }}
             >
               <Text style={[s.dayName, active && s.dayTextOn]}>
-                {d.toLocaleDateString('en-GB', { weekday: 'short' })}
+                {d.toLocaleDateString(locale, { weekday: 'short' })}
               </Text>
               <Text style={[s.dayNum, active && s.dayTextOn]}>{d.getDate()}</Text>
               <Text style={[s.dayMon, active && s.dayTextOn]}>
-                {d.toLocaleDateString('en-GB', { month: 'short' })}
+                {d.toLocaleDateString(locale, { month: 'short' })}
               </Text>
             </Pressable>
           );
@@ -303,25 +304,31 @@ export default function Home() {
       </ScrollView>
 
       <View style={s.controls}>
-        <Segmented options={WINDOWS} value={window} onChange={(v) => tap(() => setWindow(v as Window))()} />
-        <Segmented options={HOLES} value={holes} onChange={(v) => tap(() => setHoles(v as Holes))()} />
+        <Segmented
+          options={WINDOWS.map((k) => ({ key: k, label: t(`window.${k}`) }))}
+          value={window}
+          onChange={(v) => tap(() => setWindow(v as Window))()}
+        />
+        <Segmented
+          options={HOLES.map((k) => ({ key: k, label: t(`holes.${k}`) }))}
+          value={holes}
+          onChange={(v) => tap(() => setHoles(v as Holes))()}
+        />
         <View style={s.stepper}>
           <Pressable
             onPress={tap(() => setPlayers((p) => Math.max(1, p - 1)))}
             style={s.stepBtn}
             hitSlop={10}
-            accessibilityLabel="Fewer players"
+            accessibilityLabel={t('a11y.fewerPlayers')}
           >
             <Text style={s.stepSign}>−</Text>
           </Pressable>
-          <Text style={s.stepValue}>
-            {players} {players === 1 ? 'player' : 'players'}
-          </Text>
+          <Text style={s.stepValue}>{t('players', { count: players })}</Text>
           <Pressable
             onPress={tap(() => setPlayers((p) => Math.min(4, p + 1)))}
             style={s.stepBtn}
             hitSlop={10}
-            accessibilityLabel="More players"
+            accessibilityLabel={t('a11y.morePlayers')}
           >
             <Text style={s.stepSign}>+</Text>
           </Pressable>
@@ -338,7 +345,7 @@ export default function Home() {
             onPress={tap(() => setAreas([]))}
             style={[s.area, areas.length === 0 && s.areaOn]}
           >
-            <Text style={[s.areaText, areas.length === 0 && s.areaTextOn]}>All areas</Text>
+            <Text style={[s.areaText, areas.length === 0 && s.areaTextOn]}>{t('areas.all')}</Text>
           </Pressable>
           {allAreas.map((a) => {
             const on = areas.includes(a);
@@ -366,10 +373,10 @@ export default function Home() {
             pressed && { opacity: 0.85 },
           ]}
           accessibilityRole="button"
-          accessibilityLabel={loading ? 'Cancel search' : 'Find tee times'}
+          accessibilityLabel={t(loading ? 'a11y.cancelSearch' : 'cta.find')}
         >
           <Text style={[s.ctaText, loading && s.ctaCancelText]}>
-            {loading ? 'Cancel' : 'Find tee times'}
+            {t(loading ? 'cta.cancel' : 'cta.find')}
           </Text>
         </Pressable>
       </View>
@@ -389,10 +396,10 @@ export default function Home() {
       {result && (
         <>
           <View style={s.summary}>
-            <Stat label="Courses" value={`${result.coursesWithSpace}`} />
-            <Stat label="Tee times" value={`${result.teeTimes.length}`} />
+            <Stat label={t('stat.courses')} value={`${result.coursesWithSpace}`} />
+            <Stat label={t('stat.teeTimes')} value={`${result.teeTimes.length}`} />
             <Stat
-              label="From"
+              label={t('stat.from')}
               accent
               value={
                 result.teeTimes.length
@@ -402,7 +409,7 @@ export default function Home() {
             />
           </View>
 
-          <Text style={s.freshness}>{freshness(result)}</Text>
+          <Text style={s.freshness}>{freshness(result, t)}</Text>
 
           <View style={s.viewBar}>
             {view === 'table' ? (
@@ -410,7 +417,7 @@ export default function Home() {
                 {(['time', 'price'] as SortBy[]).map((k) => (
                   <Pressable key={k} onPress={tap(() => setSortBy(k))} style={s.sortItem}>
                     <Text style={[s.sortText, sortBy === k && s.sortTextOn]}>
-                      {k === 'time' ? 'By time' : 'By price'}
+                      {t(k === 'time' ? 'sort.time' : 'sort.price')}
                     </Text>
                   </Pressable>
                 ))}
@@ -427,10 +434,10 @@ export default function Home() {
                   style={[s.toggleItem, view === v && s.toggleItemOn]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: view === v }}
-                  accessibilityLabel={`${v} view`}
+                  accessibilityLabel={t(v === 'cards' ? 'a11y.cardsView' : 'a11y.tableView')}
                 >
                   <Text style={[s.toggleText, view === v && s.toggleTextOn]}>
-                    {v === 'cards' ? '▦  Cards' : '☰  Table'}
+                    {v === 'cards' ? `▦  ${t('view.cards')}` : `☰  ${t('view.table')}`}
                   </Text>
                 </Pressable>
               ))}
@@ -448,7 +455,7 @@ export default function Home() {
       <View style={s.problems}>
         <Pressable onPress={tap(() => setShowProblems((v) => !v))} style={s.problemsHead}>
           <Text style={s.problemsTitle}>
-            {problems.length} course{problems.length === 1 ? '' : 's'} with nothing to show
+            {t('problems.title', { count: problems.length })}
           </Text>
           <Text style={s.problemsChevron}>{showProblems ? '⌃' : '⌄'}</Text>
         </Pressable>
@@ -467,12 +474,9 @@ export default function Home() {
   const empty = loading ? (
     view === 'table' ? <SkeletonRows /> : <SkeletonCards />
   ) : result ? (
-    <Empty
-      title="Nothing free"
-      body="No tee times matched. Try another day, a wider time window, or 9 holes."
-    />
+    <Empty title={t('empty.none.title')} body={t('empty.none.body')} />
   ) : (
-    <Empty title="Pick a day" body="Choose a date and time of day, then tap Find tee times." />
+    <Empty title={t('empty.start.title')} body={t('empty.start.body')} />
   );
 
   const refresh = <RefreshControl refreshing={loading} onRefresh={run} tintColor={c.accent} />;
@@ -527,6 +531,7 @@ export default function Home() {
 
 function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
   const { colors: c } = useTheme();
+  const { t } = useI18n();
   const s = useStyles(c);
   const { head, from, count } = group;
   return (
@@ -534,7 +539,9 @@ function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
       onPress={onPress}
       style={({ pressed }) => [s.card, pressed && { transform: [{ scale: 0.985 }] }]}
       accessibilityRole="button"
-      accessibilityLabel={`${head.label}, ${count} tee times from €${from}`}
+      accessibilityLabel={`${head.label}, ${t('course.teeTimes', { count })}, ${t('course.from', {
+        price: from,
+      })}`}
     >
       {/* CourseArt lays down its own scrim; a second one turns photos black. */}
       <CourseArt image={head.image} seed={head.club} style={s.cardArt} radius={theme.radius.lg} />
@@ -545,8 +552,8 @@ function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
             {head.label}
           </Text>
           <View style={s.cardChips}>
-            <Chip label={`${count} ${count === 1 ? 'time' : 'times'}`} />
-            <Chip label={`from ${head.time}`} />
+            <Chip label={t('card.times', { count })} />
+            <Chip label={t('card.from', { time: head.time })} />
             <Chip label={`${head.holes}h`} />
           </View>
         </View>

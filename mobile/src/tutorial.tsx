@@ -10,43 +10,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useI18n } from './i18n';
 import { theme, useTheme, type Palette } from './theme';
 
 const SEEN_KEY = 'teetimer:tutorialSeen';
 
-const STEPS: { icon: string; title: string; body: string }[] = [
-  {
-    icon: '1',
-    title: 'Pick a day and a time',
-    body: 'Choose a date, then Any time, Morning or Afternoon. Set how many '
-      + 'of you are playing and whether you want 18 or 9 holes.',
-  },
-  {
-    icon: '2',
-    title: 'Narrow it down if you like',
-    body: 'The area chips limit the search to one stretch of coast — Marbella, '
-      + 'Estepona, Mijas. Fewer clubs also means a much faster search.',
-  },
-  {
-    icon: '3',
-    title: 'Tap Find tee times',
-    body: 'This reads every club\'s own booking system live, so the whole coast '
-      + 'takes around fifteen seconds. One area takes a couple. You can cancel '
-      + 'at any point to change your mind.',
-  },
-  {
-    icon: '4',
-    title: 'Cards or table',
-    body: 'Cards show one photo per course, cheapest first. Table lists every '
-      + 'tee time on the coast at once, by time or by price.',
-  },
-  {
-    icon: '→',
-    title: 'Tapping a club takes you to their booking page',
-    body: 'Open a course to see its full tee sheet, then tap a time to go '
-      + 'straight to that club\'s own site to book it. Tee Timer never takes '
-      + 'payment and never holds a reservation — it only finds the prices.',
-  },
+/** Copy lives in ./i18n; this is just the ordering and the bullet glyphs. */
+const STEPS = [
+  { icon: '1', key: 'tut.1' },
+  { icon: '2', key: 'tut.2' },
+  { icon: '3', key: 'tut.3' },
+  { icon: '4', key: 'tut.4' },
+  { icon: '→', key: 'tut.5' },
 ];
 
 export function useTutorial() {
@@ -77,6 +52,7 @@ export function useTutorial() {
 
 export function Tutorial({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { colors: c } = useTheme();
+  const { t } = useI18n();
   const s = React.useMemo(() => makeStyles(c), [c]);
 
   return (
@@ -84,22 +60,19 @@ export function Tutorial({ visible, onClose }: { visible: boolean; onClose: () =
       <View style={s.backdrop}>
         <View style={s.sheet}>
           <View style={s.grabber} />
-          <Text style={s.kicker}>COSTA DEL SOL</Text>
-          <Text style={s.title}>Every tee time on the coast</Text>
-          <Text style={s.lede}>
-            Live prices from 38 clubs between Sotogrande and Fuengirola, read
-            straight from each club's own booking system.
-          </Text>
+          <Text style={s.kicker}>{t('app.kicker')}</Text>
+          <Text style={s.title}>{t('tut.title')}</Text>
+          <Text style={s.lede}>{t('tut.lede')}</Text>
 
           <ScrollView style={s.steps} showsVerticalScrollIndicator={false}>
             {STEPS.map((step) => (
-              <View key={step.title} style={s.step}>
+              <View key={step.key} style={s.step}>
                 <View style={s.bullet}>
                   <Text style={s.bulletText}>{step.icon}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={s.stepTitle}>{step.title}</Text>
-                  <Text style={s.stepBody}>{step.body}</Text>
+                  <Text style={s.stepTitle}>{t(`${step.key}.title`)}</Text>
+                  <Text style={s.stepBody}>{t(`${step.key}.body`)}</Text>
                 </View>
               </View>
             ))}
@@ -110,7 +83,7 @@ export function Tutorial({ visible, onClose }: { visible: boolean; onClose: () =
             style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
             accessibilityRole="button"
           >
-            <Text style={s.ctaText}>Let's play</Text>
+            <Text style={s.ctaText}>{t('tut.cta')}</Text>
           </Pressable>
         </View>
       </View>

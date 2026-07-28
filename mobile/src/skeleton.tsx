@@ -10,6 +10,7 @@
 import React from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
+import { useI18n } from './i18n';
 import { theme, useTheme, type Palette } from './theme';
 
 
@@ -207,16 +208,14 @@ export function SearchProgress({
   onFinished?: () => void;
 }) {
   const { colors: c } = useTheme();
+  const { t } = useI18n();
   const s = useStyles(c);
   return (
     <View style={s.progress}>
       <Text style={s.title}>
-        {done ? 'Almost there' : `Checking ${courses} course${courses === 1 ? '' : 's'}`}
+        {done ? t('progress.almost') : t('progress.checking', { count: courses })}
       </Text>
-      <Text style={s.body}>
-        Reading each club's own booking system for the prices they're selling
-        right now.
-      </Text>
+      <Text style={s.body}>{t('progress.body')}</Text>
       <ProgressBar courses={courses} done={done} onFinished={onFinished} />
     </View>
   );

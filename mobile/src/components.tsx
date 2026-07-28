@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
 import { imageUrl, type TeeTime } from './api';
 import { GeneratedCourse } from './courseart';
+import { useI18n } from './i18n';
 import { palettes, theme, useTheme, type Palette } from './theme';
 
 /**
@@ -102,6 +103,7 @@ export function Price({ value, rack, off, big, onImage }: {
 
 export function TeeTimeRow({ t, onPress }: { t: TeeTime; onPress: () => void }) {
   const { colors: c } = useTheme();
+  const { t: tr } = useI18n();
   const s = useStyles(c);
   return (
     <Pressable
@@ -117,7 +119,7 @@ export function TeeTimeRow({ t, onPress }: { t: TeeTime; onPress: () => void }) 
         </Text>
         <View style={s.metaRow}>
           <Chip label={`${t.holes}h`} />
-          <Chip label={`${t.spaces} ${t.spaces === 1 ? 'space' : 'spaces'}`} />
+          <Chip label={tr('spaces', { count: t.spaces })} />
           {t.includes.slice(0, 2).map((x) => (
             <Chip key={x} label={x} tone="accent" />
           ))}
@@ -167,13 +169,14 @@ export function TableRow({
 /** Column captions for the table view. */
 export function TableHead() {
   const { colors: c } = useTheme();
+  const { t } = useI18n();
   const s = useStyles(c);
   return (
     <View style={s.tHead}>
-      <Text style={[s.tHeadCell, { width: 52 }]}>TEE</Text>
-      <Text style={[s.tHeadCell, { flex: 1 }]}>COURSE</Text>
-      <Text style={[s.tHeadCell, { width: 34, textAlign: 'right' }]}>MAX</Text>
-      <Text style={[s.tHeadCell, { width: 56, textAlign: 'right' }]}>PRICE</Text>
+      <Text style={[s.tHeadCell, { width: 52 }]}>{t('table.tee')}</Text>
+      <Text style={[s.tHeadCell, { flex: 1 }]}>{t('table.course')}</Text>
+      <Text style={[s.tHeadCell, { width: 34, textAlign: 'right' }]}>{t('table.max')}</Text>
+      <Text style={[s.tHeadCell, { width: 56, textAlign: 'right' }]}>{t('table.price')}</Text>
     </View>
   );
 }

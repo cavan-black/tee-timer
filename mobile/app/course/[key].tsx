@@ -22,12 +22,14 @@ import {
   type Window,
 } from '../../src/api';
 import { Chip, CourseArt, Empty, TeeTimeRow } from '../../src/components';
+import { useI18n } from '../../src/i18n';
 import { recall } from '../../src/store';
 import { fill, theme, useTheme, type Palette } from '../../src/theme';
 
 
 export default function CourseScreen() {
   const { colors: c } = useTheme();
+  const { t, locale } = useI18n();
   const s = useStyles(c);
   const { key, date, window, players, holes } = useLocalSearchParams<{
     key: string;
@@ -90,7 +92,7 @@ export default function CourseScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top + 40 }}>
         <Back onPress={() => router.back()} />
-        <Empty title="No longer listed" body="Run the search again to refresh this course." />
+        <Empty title={t('course.gone.title')} body={t('course.gone.body')} />
       </View>
     );
   }
@@ -120,14 +122,14 @@ export default function CourseScreen() {
             <Text style={s.title}>{head.label}</Text>
             <View style={s.chips}>
               <Chip
-                label={day.toLocaleDateString('en-GB', {
+                label={day.toLocaleDateString(locale, {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',
                 })}
               />
-              <Chip label={`${times.length} tee times`} />
-              <Chip label={`from €${cheapest.toFixed(0)}`} tone="accent" />
+              <Chip label={t('course.teeTimes', { count: times.length })} />
+              <Chip label={t('course.from', { price: cheapest.toFixed(0) })} tone="accent" />
             </View>
           </View>
         </View>
@@ -138,10 +140,7 @@ export default function CourseScreen() {
           ))}
         </View>
 
-        <Text style={s.footnote}>
-          Prices are the club's own online rate, per player. Tapping a tee time opens the
-          club's booking page — Tee Timer never takes payment or holds a reservation.
-        </Text>
+        <Text style={s.footnote}>{t('course.footnote')}</Text>
       </ScrollView>
 
       <View style={[s.dock, { paddingBottom: insets.bottom + theme.space(3) }]}>
@@ -152,7 +151,7 @@ export default function CourseScreen() {
             accessibilityRole="button"
             accessibilityLabel={`Book online at ${head.club}`}
           >
-            <Text style={s.ctaText}>Book online</Text>
+            <Text style={s.ctaText}>{t('course.book')}</Text>
           </Pressable>
           {/* Some tee sheets are easier sorted by voice, and not every club
               publishes a number — so this only appears when we have one. */}
@@ -163,7 +162,7 @@ export default function CourseScreen() {
               accessibilityRole="button"
               accessibilityLabel={`Call ${head.club} on ${head.phone}`}
             >
-              <Text style={s.callText}>Call</Text>
+              <Text style={s.callText}>{t('course.call')}</Text>
             </Pressable>
           )}
         </View>
@@ -174,9 +173,10 @@ export default function CourseScreen() {
 
 function Back({ onPress }: { onPress: () => void }) {
   const { colors: c } = useTheme();
+  const { t } = useI18n();
   const s = useStyles(c);
   return (
-    <Pressable onPress={onPress} style={s.back} hitSlop={12} accessibilityLabel="Back">
+    <Pressable onPress={onPress} style={s.back} hitSlop={12} accessibilityLabel={t('a11y.back')}>
       <Text style={s.backGlyph}>‹</Text>
     </Pressable>
   );
