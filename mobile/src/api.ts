@@ -7,8 +7,11 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// Falls back to production, not localhost. .env is gitignored, and an EAS
+// build that misses it would otherwise ship pointing at a laptop that isn't
+// there -- broken on every device, and only discovered after upload.
 export const API_BASE = (
-  process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8000'
+  process.env.EXPO_PUBLIC_API_URL ?? 'https://tee-timer-api.vercel.app'
 ).replace(/\/$/, '');
 
 const TIMEOUT_MS = 90_000;
