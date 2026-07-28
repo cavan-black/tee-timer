@@ -103,6 +103,10 @@ const en: Dict = {
   'course.footnote':
     "Prices are the club's own online rate, per player. Tapping a tee time opens "
     + "the club's booking page — Tee Timer never takes payment or holds a reservation.",
+  'credits.photo':
+    'The photograph above was published by {club} to advertise its own course, and '
+    + 'remains its copyright. Tee Timer claims no ownership of it.',
+  'credits.link': 'Image credits and removal requests',
 
   // tutorial
   'tut.title': 'Every tee time on the coast',
@@ -207,6 +211,11 @@ const es: Dict = {
     'Los precios son la tarifa online del propio club, por jugador. Al pulsar una '
     + 'salida se abre la página de reservas del club — Tee Timer nunca cobra ni '
     + 'retiene una reserva.',
+  'credits.photo':
+    'La fotografía superior fue publicada por {club} para promocionar su propio '
+    + 'campo y sigue siendo de su propiedad. Tee Timer no reclama ningún derecho '
+    + 'sobre ella.',
+  'credits.link': 'Créditos de las imágenes y solicitudes de retirada',
 
   'tut.title': 'Todas las salidas de la costa',
   'tut.lede':
@@ -312,6 +321,11 @@ const de: Dict = {
     'Die Preise sind der Online-Tarif des Clubs, pro Spieler. Ein Tipp auf eine '
     + 'Startzeit öffnet die Buchungsseite des Clubs — Tee Timer nimmt keine '
     + 'Zahlungen entgegen und reserviert nichts.',
+  'credits.photo':
+    'Das Foto oben wurde von {club} veröffentlicht, um den eigenen Platz zu '
+    + 'bewerben, und bleibt dessen Urheberrecht. Tee Timer erhebt darauf keinen '
+    + 'Anspruch.',
+  'credits.link': 'Bildnachweise und Entfernungsanfragen',
 
   'tut.title': 'Alle Startzeiten der Küste',
   'tut.lede':

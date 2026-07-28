@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
+  API_BASE,
   cachedSearch,
   type Holes,
   type SearchResult,
@@ -141,6 +142,17 @@ export default function CourseScreen() {
         </View>
 
         <Text style={s.footnote}>{t('course.footnote')}</Text>
+
+        {/* Only where a real photograph is shown. The generated illustration is
+            ours, so crediting the club for it would be wrong. */}
+        {head.image && (
+          <>
+            <Text style={s.footnote}>{t('credits.photo', { club: head.club })}</Text>
+            <Pressable onPress={() => open(`${API_BASE}/credits`)} hitSlop={8}>
+              <Text style={s.creditLink}>{t('credits.link')} ›</Text>
+            </Pressable>
+          </>
+        )}
       </ScrollView>
 
       <View style={[s.dock, { paddingBottom: insets.bottom + theme.space(3) }]}>
@@ -213,6 +225,13 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     lineHeight: 17,
     paddingHorizontal: theme.space(5),
     paddingTop: theme.space(6),
+  },
+  creditLink: {
+    ...theme.font.caption,
+    letterSpacing: 0.2,
+    color: c.accent,
+    paddingHorizontal: theme.space(5),
+    paddingTop: theme.space(3),
   },
   dock: {
     position: 'absolute',
