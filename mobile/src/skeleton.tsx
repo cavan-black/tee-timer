@@ -10,9 +10,8 @@
 import React from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
-import { theme } from './theme';
+import { theme, useTheme, type Palette } from './theme';
 
-const c = theme.color;
 
 /** Shared pulse so every placeholder breathes in step rather than shimmering
  *  independently, which looks noisy. */
@@ -42,10 +41,14 @@ function usePulse() {
 }
 
 function Bar({ w, h = 12, style }: { w: number | string; h?: number; style?: object }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return <View style={[s.bar, { width: w as number, height: h, borderRadius: h / 2 }, style]} />;
 }
 
 export function SkeletonCards({ count = 3 }: { count?: number }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   const opacity = usePulse();
   return (
     <View>
@@ -68,6 +71,8 @@ export function SkeletonCards({ count = 3 }: { count?: number }) {
 }
 
 export function SkeletonRows({ count = 8 }: { count?: number }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   const opacity = usePulse();
   return (
     <View>
@@ -113,6 +118,8 @@ function ProgressBar({
   done?: boolean;
   onFinished?: () => void;
 }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   const grow = React.useRef(new Animated.Value(0)).current;
   const sheen = React.useRef(new Animated.Value(0)).current;
   const [width, setWidth] = React.useState(0);
@@ -199,6 +206,8 @@ export function SearchProgress({
   done?: boolean;
   onFinished?: () => void;
 }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <View style={s.progress}>
       <Text style={s.title}>
@@ -213,8 +222,12 @@ export function SearchProgress({
   );
 }
 
-const s = StyleSheet.create({
-  bar: { backgroundColor: 'rgba(255,255,255,0.10)' },
+function useStyles(c: Palette) {
+  return React.useMemo(() => makeStyles(c), [c]);
+}
+
+const makeStyles = (c: Palette) => StyleSheet.create({
+  bar: { backgroundColor: c.placeholder },
 
   card: {
     height: 208,
@@ -248,7 +261,7 @@ const s = StyleSheet.create({
     width: '100%',
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    backgroundColor: c.placeholder,
     marginTop: theme.space(5),
     overflow: 'hidden',
   },

@@ -4,16 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 
-import { GeneratedCourse } from './courseart';
-import { theme } from './theme';
 import { imageUrl, type TeeTime } from './api';
-
-const c = theme.color;
+import { GeneratedCourse } from './courseart';
+import { palettes, theme, useTheme, type Palette } from './theme';
 
 /**
- * Course imagery. 24 of the 38 clubs publish a usable photo; the rest get
- * deterministic artwork built from the club name so every card still reads as
- * a distinct place rather than an empty grey box.
+ * Course imagery, with the drawn scene as a fallback — used both when a club
+ * publishes no photo and when a photo fails to load.
  */
 export function CourseArt({
   image,
@@ -55,7 +52,6 @@ export function CourseArt({
     );
   }
 
-  // No usable photo from the club: draw the course instead of leaving a hole.
   return <GeneratedCourse seed={seed} style={style} radius={radius} />;
 }
 
@@ -66,8 +62,9 @@ export function Chip({
   label: string;
   tone?: 'default' | 'accent' | 'deal';
 }) {
-  const tint =
-    tone === 'accent' ? c.accent : tone === 'deal' ? c.deal : c.muted;
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
+  const tint = tone === 'accent' ? c.accent : tone === 'deal' ? c.deal : c.muted;
   return (
     <View style={[s.chip, tone !== 'default' && { borderColor: `${tint}66` }]}>
       <Text style={[s.chipText, { color: tint }]} numberOfLines={1}>
@@ -77,19 +74,26 @@ export function Chip({
   );
 }
 
-export function Price({ value, rack, off, big }: {
+export function Price({ value, rack, off, big, onImage }: {
   value: number; rack?: number | null; off?: number | null; big?: boolean;
+  /** Sitting over course photography, which is dark under the scrim in both
+   *  themes — so use the bright green, not light mode's darker one. */
+  onImage?: boolean;
 }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   const showRack = rack != null && off != null && rack > value;
+  const tint = onImage ? palettes.dark.accent : c.accent;
+  const deal = onImage ? palettes.dark.deal : c.deal;
   return (
     <View style={{ alignItems: 'flex-end' }}>
-      <Text style={[s.price, big && { fontSize: 26 }]}>
+      <Text style={[s.price, { color: tint }, big && { fontSize: 26 }]}>
         €{value.toFixed(value % 1 === 0 ? 0 : 2)}
       </Text>
       {showRack && (
-        <Text style={s.rack}>
+        <Text style={[s.rack, onImage && { color: 'rgba(255,255,255,0.7)' }]}>
           <Text style={s.strike}>€{rack!.toFixed(0)}</Text>
-          <Text style={{ color: c.deal }}> −{Math.round(off!)}%</Text>
+          <Text style={{ color: deal }}> −{Math.round(off!)}%</Text>
         </Text>
       )}
     </View>
@@ -97,6 +101,8 @@ export function Price({ value, rack, off, big }: {
 }
 
 export function TeeTimeRow({ t, onPress }: { t: TeeTime; onPress: () => void }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <Pressable
       onPress={onPress}
@@ -132,6 +138,8 @@ export function TableRow({
   onPress: () => void;
   showCourse?: boolean;
 }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <Pressable
       onPress={onPress}
@@ -158,6 +166,8 @@ export function TableRow({
 
 /** Column captions for the table view. */
 export function TableHead() {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <View style={s.tHead}>
       <Text style={[s.tHeadCell, { width: 52 }]}>TEE</Text>
@@ -169,6 +179,8 @@ export function TableHead() {
 }
 
 export function Empty({ title, body }: { title: string; body: string }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <View style={s.empty}>
       <Text style={s.emptyTitle}>{title}</Text>
@@ -177,15 +189,11 @@ export function Empty({ title, body }: { title: string; body: string }) {
   );
 }
 
-const s = StyleSheet.create({
-  blob: {
-    position: 'absolute',
-    right: -50,
-    bottom: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 999,
-  },
+function useStyles(c: Palette) {
+  return React.useMemo(() => makeStyles(c), [c]);
+}
+
+const makeStyles = (c: Palette) => StyleSheet.create({
   chip: {
     borderWidth: 1,
     borderColor: c.line,
@@ -214,6 +222,7 @@ const s = StyleSheet.create({
   },
   rowTitle: { ...theme.font.body, color: c.text },
   metaRow: { flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' },
+
   tHead: {
     flexDirection: 'row',
     alignItems: 'center',

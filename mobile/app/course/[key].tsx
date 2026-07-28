@@ -23,11 +23,12 @@ import {
 } from '../../src/api';
 import { Chip, CourseArt, Empty, TeeTimeRow } from '../../src/components';
 import { recall } from '../../src/store';
-import { fill, theme } from '../../src/theme';
+import { fill, theme, useTheme, type Palette } from '../../src/theme';
 
-const c = theme.color;
 
 export default function CourseScreen() {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   const { key, date, window, players, holes } = useLocalSearchParams<{
     key: string;
     date: string;
@@ -107,7 +108,7 @@ export default function CourseScreen() {
           {/* Hero draws its own scrim; this only blends the base into the page. */}
           <CourseArt image={head.image} seed={head.club} style={fill} radius={0} scrim={false} />
           <LinearGradient
-            colors={['rgba(7,18,13,0.45)', 'transparent', 'rgba(7,18,13,0.55)', c.bg]}
+            colors={['rgba(3,10,7,0.45)', 'transparent', 'rgba(3,10,7,0.55)', c.bg]}
             locations={[0, 0.35, 0.78, 1]}
             style={StyleSheet.absoluteFill}
           />
@@ -156,6 +157,8 @@ export default function CourseScreen() {
 }
 
 function Back({ onPress }: { onPress: () => void }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <Pressable onPress={onPress} style={s.back} hitSlop={12} accessibilityLabel="Back">
       <Text style={s.backGlyph}>‹</Text>
@@ -163,12 +166,17 @@ function Back({ onPress }: { onPress: () => void }) {
   );
 }
 
-const s = StyleSheet.create({
+
+function useStyles(c: Palette) {
+  return React.useMemo(() => makeStyles(c), [c]);
+}
+
+const makeStyles = (c: Palette) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   hero: { height: 340, justifyContent: 'space-between' },
   heroText: { padding: theme.space(5) },
   area: { ...theme.font.caption, color: c.accent },
-  title: { ...theme.font.display, color: '#fff', marginTop: 4 },
+  title: { ...theme.font.display, color: c.onImage, marginTop: 4 },
   chips: { flexDirection: 'row', gap: 6, marginTop: theme.space(3), flexWrap: 'wrap' },
   back: {
     marginLeft: theme.space(4),
@@ -197,7 +205,7 @@ const s = StyleSheet.create({
     bottom: 0,
     paddingHorizontal: theme.space(5),
     paddingTop: theme.space(3),
-    backgroundColor: 'rgba(7,18,13,0.94)',
+    backgroundColor: c.bg,
     borderTopWidth: 1,
     borderTopColor: c.line,
   },

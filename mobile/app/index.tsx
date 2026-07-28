@@ -30,9 +30,8 @@ import { Chip, CourseArt, Empty, Price, TableHead, TableRow } from '../src/compo
 import { groupByCourse, rankProblems, sortTeeTimes, type Group, type SortBy } from '../src/results';
 import { SearchProgress, SkeletonCards, SkeletonRows } from '../src/skeleton';
 import { remember } from '../src/store';
-import { fill, theme } from '../src/theme';
+import { fill, theme, useTheme, type Palette } from '../src/theme';
 
-const c = theme.color;
 const CARD_H = 208;
 const CARD_GAP = theme.space(3);
 const SNAP = CARD_H + CARD_GAP;
@@ -81,6 +80,8 @@ function freshness(result: SearchResult): string {
 }
 
 export default function Home() {
+  const { colors: c, name: themeName, toggle: toggleTheme } = useTheme();
+  const s = useStyles(c);
   const insets = useSafeAreaInsets();
   const days = React.useMemo(() => nextDays(28), []);
 
@@ -244,8 +245,19 @@ export default function Home() {
   const header = (
     <View style={{ paddingTop: insets.top + theme.space(3) }}>
       <View style={s.header}>
-        <Text style={s.kicker}>COSTA DEL SOL</Text>
-        <Text style={s.h1}>Tee Timer</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.kicker}>COSTA DEL SOL</Text>
+          <Text style={s.h1}>Tee Timer</Text>
+        </View>
+        <Pressable
+          onPress={tap(toggleTheme)}
+          style={s.themeToggle}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={themeName === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <Text style={s.themeGlyph}>{themeName === 'dark' ? '☀' : '☾'}</Text>
+        </Pressable>
       </View>
 
       <ScrollView
@@ -500,6 +512,8 @@ export default function Home() {
 }
 
 function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   const { head, from, count } = group;
   return (
     <Pressable
@@ -522,13 +536,15 @@ function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
             <Chip label={`${head.holes}h`} />
           </View>
         </View>
-        <Price value={from} rack={head.rackPrice} off={head.discountPct} big />
+        <Price value={from} rack={head.rackPrice} off={head.discountPct} big onImage />
       </View>
     </Pressable>
   );
 }
 
 function Stat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <View style={s.stat}>
       <Text style={s.statLabel}>{label.toUpperCase()}</Text>
@@ -546,6 +562,8 @@ function Segmented({
   value: string;
   onChange: (key: string) => void;
 }) {
+  const { colors: c } = useTheme();
+  const s = useStyles(c);
   return (
     <View style={s.seg}>
       {options.map((o) => {
@@ -566,8 +584,29 @@ function Segmented({
   );
 }
 
-const s = StyleSheet.create({
-  header: { paddingHorizontal: theme.space(5), paddingBottom: theme.space(3) },
+
+function useStyles(c: Palette) {
+  return React.useMemo(() => makeStyles(c), [c]);
+}
+
+const makeStyles = (c: Palette) => StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.space(5),
+    paddingBottom: theme.space(3),
+  },
+  themeToggle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.line,
+  },
+  themeGlyph: { fontSize: 18, color: c.text },
   kicker: { ...theme.font.caption, color: c.accent, marginBottom: 4 },
   h1: { ...theme.font.display, color: c.text },
 
@@ -727,7 +766,7 @@ const s = StyleSheet.create({
     padding: theme.space(4),
   },
   cardArea: { ...theme.font.caption, color: c.accent },
-  cardTitle: { ...theme.font.title, color: '#fff', marginTop: 3, fontSize: 21 },
+  cardTitle: { ...theme.font.title, color: c.onImage, marginTop: 3, fontSize: 21 },
   cardChips: { flexDirection: 'row', gap: 6, marginTop: 9, flexWrap: 'wrap' },
 
   problems: {
