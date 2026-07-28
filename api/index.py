@@ -139,6 +139,29 @@ def _page(name: str):
     )
 
 
+@app.get("/")
+def landing():
+    """The marketing page. Anyone who finds the API root should meet the app,
+    not a JSON error."""
+    return _page("index")
+
+
+@app.get("/screens/{name}")
+def screen(name: str):
+    """Screenshots used by the landing page. Real captures of the app running
+    against live club data, not mock-ups."""
+    if not name.replace("-", "").replace(".", "").isalnum() or ".." in name:
+        raise HTTPException(status_code=400, detail="bad name")
+    path = ROOT / "assets" / "store" / "screens" / name
+    if not path.exists() or path.suffix.lower() != ".png":
+        raise HTTPException(status_code=404, detail="not found")
+    return FileResponse(
+        path,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
+
+
 @app.get("/privacy")
 def privacy():
     """Google Play requires a privacy policy at a public URL, and it has to

@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tee Timer — every tee time on the Costa del Sol, in one search</title>
+<meta name="description" content="Sick of checking every course individually? Tee Timer reads the booking system of 38 golf clubs from Sotogrande to Fuengirola and compares every available tee time and price in one go.">
+<meta property="og:title" content="Tee Timer — every tee time on the Costa del Sol">
+<meta property="og:description" content="Compare every available tee time and green fee on the coast in one search.">
+<meta property="og:type" content="website">
+<style>
+  :root {
+    --bg:#07120D; --surface:#0F1F17; --surface-hi:#162E22;
+    --text:#F2F7F4; --muted:rgba(242,247,244,.66); --faint:rgba(242,247,244,.42);
+    --accent:#4ADE80; --accent-ink:#04150C; --line:rgba(255,255,255,.10);
+    --deal:#FFA94D;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#F4F7F4; --surface:#FFFFFF; --surface-hi:#E6EFE8;
+      --text:#0B1A12; --muted:rgba(11,26,18,.70); --faint:rgba(11,26,18,.48);
+      --accent:#0F8A45; --accent-ink:#FFFFFF; --line:rgba(7,18,13,.10);
+      --deal:#B45309;
+    }
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--text);
+    font:16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 22px; }
+  .kicker { font-size:12px; letter-spacing:.14em; color:var(--accent); font-weight:700; margin:0 0 10px; }
+
+  /* ---- hero ---- */
+  header { padding:72px 0 8px; text-align:center; }
+  h1 { font-size:clamp(34px,6vw,58px); line-height:1.08; letter-spacing:-.03em; margin:0 0 20px; }
+  h1 .hl { color:var(--accent); }
+  .lede { font-size:clamp(17px,2.4vw,21px); color:var(--muted); max-width:46rem; margin:0 auto 14px; }
+  .sub { color:var(--faint); font-size:15px; max-width:40rem; margin:0 auto; }
+
+  .cta-row { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:34px 0 8px; }
+  .btn {
+    display:inline-block; padding:15px 30px; border-radius:999px; text-decoration:none;
+    font-weight:700; font-size:16px; background:var(--accent); color:var(--accent-ink);
+  }
+  .btn.ghost { background:transparent; color:var(--text); border:1px solid var(--line); }
+  .price-note { color:var(--faint); font-size:14px; margin-top:14px; }
+
+  /* ---- stats ---- */
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:56px 0; }
+  .stat { background:var(--surface); border-radius:16px; padding:20px; text-align:center; }
+  .stat b { display:block; font-size:30px; letter-spacing:-.02em; }
+  .stat span { font-size:12px; letter-spacing:.1em; color:var(--faint); text-transform:uppercase; font-weight:600; }
+
+  /* ---- feature rows ---- */
+  .feature {
+    display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center;
+    padding:64px 0; border-top:1px solid var(--line);
+  }
+  .feature:nth-child(even) .shot { order:2; }
+  .feature h2 { font-size:clamp(24px,3.4vw,34px); line-height:1.18; letter-spacing:-.02em; margin:0 0 14px; }
+  .feature p { color:var(--muted); margin:0 0 12px; }
+  .feature ul { color:var(--muted); margin:16px 0 0; padding-left:20px; }
+  .feature li { margin-bottom:7px; }
+
+  /* phone frame + overlay caption */
+  .shot { display:flex; justify-content:center; }
+  .phone {
+    position:relative; width:290px; border-radius:34px; overflow:hidden;
+    border:9px solid #0b0b0b; background:#0b0b0b;
+    box-shadow:0 26px 60px rgba(0,0,0,.45);
+  }
+  @media (prefers-color-scheme: light) { .phone { box-shadow:0 26px 60px rgba(11,26,18,.22); } }
+  .phone img { display:block; width:100%; height:auto; }
+  .tag {
+    position:absolute; left:0; right:0; bottom:0; padding:44px 16px 16px;
+    background:linear-gradient(to top, rgba(3,10,7,.94), rgba(3,10,7,.72) 55%, transparent);
+    color:#fff; font-size:14px; font-weight:600; line-height:1.45;
+  }
+  .tag em { display:block; font-style:normal; color:var(--accent); font-size:11px;
+            letter-spacing:.12em; text-transform:uppercase; margin-bottom:5px; }
+
+  /* ---- closing ---- */
+  .close { text-align:center; padding:80px 0; border-top:1px solid var(--line); }
+  .close h2 { font-size:clamp(26px,4vw,40px); letter-spacing:-.02em; margin:0 0 16px; }
+  footer { border-top:1px solid var(--line); padding:36px 0 60px; color:var(--faint); font-size:14px; }
+  footer a { color:var(--faint); }
+  .disclaim { margin-top:18px; line-height:1.6; }
+
+  @media (max-width:820px) {
+    .feature { grid-template-columns:1fr; gap:34px; padding:52px 0; }
+    .feature:nth-child(even) .shot { order:0; }
+    header { padding:52px 0 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="wrap">
+  <p class="kicker">COSTA DEL SOL</p>
+  <h1>Sick of checking every course<br><span class="hl">one by one?</span></h1>
+  <p class="lede">
+    Tee Timer reads the booking system of 38 golf clubs from Sotogrande to
+    Fuengirola and shows you every available tee time and every price —
+    in one search.
+  </p>
+  <p class="sub">
+    Get the best price on the coast without opening thirty club websites.
+  </p>
+  <div class="cta-row">
+    <a class="btn" href="#">Get it on Google Play</a>
+    <a class="btn ghost" href="#how">See how it works</a>
+  </div>
+  <p class="price-note">One payment. No ads, no accounts, no subscription, no booking fees.</p>
+</header>
+
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><b>38</b><span>Clubs</span></div>
+    <div class="stat"><b>60</b><span>Courses</span></div>
+    <div class="stat"><b>~15s</b><span>Whole coast</span></div>
+    <div class="stat"><b>€0</b><span>Booking fees</span></div>
+  </div>
+</div>
+
+<main class="wrap" id="how">
+
+  <section class="feature">
+    <div class="shot">
+      <div class="phone">
+        <img src="/screens/01-cards.png" alt="Tee Timer results: golf courses as cards with photographs, cheapest first">
+        <div class="tag"><em>One search, whole coast</em>
+          Every course with space, cheapest first — with the club's own photo and its lowest price.</div>
+      </div>
+    </div>
+    <div>
+      <h2>One tap. Every club on the coast.</h2>
+      <p>
+        Pick a day, a time of day and how many of you are playing. Tee Timer
+        then queries every club's own booking system at once and puts the
+        cheapest course at the top.
+      </p>
+      <p>
+        No opening thirty tabs. No ringing round. No wondering whether the club
+        down the road is forty euros cheaper for the same morning — because
+        you can see that it is.
+      </p>
+      <ul>
+        <li>18 or 9 holes, 1 to 4 players</li>
+        <li>Morning, afternoon, twilight or any time</li>
+        <li>Narrow to one stretch of coast for a search in seconds</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="feature">
+    <div class="shot">
+      <div class="phone">
+        <img src="/screens/02-table.png" alt="Tee Timer table view: every tee time on the coast sorted by time with prices">
+        <div class="tag"><em>Compare everything at once</em>
+          Every tee time on the coast in one list — sort by time, or by price to find the cheapest round going.</div>
+      </div>
+    </div>
+    <div>
+      <h2>Compare every price, side by side.</h2>
+      <p>
+        Switch to the table and the whole coast becomes one list: every tee
+        time, every rate, every club, sorted by time or by price. Nearly two
+        thousand tee times on a normal day.
+      </p>
+      <p>
+        Where a club is selling below its rack rate, you see both the discounted
+        price and what it usually costs — so a genuine deal is obvious at a glance.
+      </p>
+    </div>
+  </section>
+
+  <section class="feature">
+    <div class="shot">
+      <div class="phone">
+        <img src="/screens/03-course.png" alt="A course page in Tee Timer showing the full tee sheet and a Book online button">
+        <div class="tag"><em>Straight through to the club</em>
+          The club's full tee sheet, then one tap to their own booking page — or call the clubhouse.</div>
+      </div>
+    </div>
+    <div>
+      <h2>Book direct, at the club's own price.</h2>
+      <p>
+        Open a course to see its whole tee sheet, then tap a time to go straight
+        to that club's booking page. Or ring the clubhouse — every number is in
+        the app.
+      </p>
+      <p>
+        Tee Timer takes no commission and adds no booking fee. The price you see
+        is the price the club is selling at, not a marked-up one. You book with
+        the club, and you pay the club.
+      </p>
+    </div>
+  </section>
+
+  <section class="feature">
+    <div class="shot">
+      <div class="phone">
+        <img src="/screens/04-espanol.png" alt="Tee Timer in Spanish, showing the interface translated">
+        <div class="tag"><em>English · Español · Deutsch</em>
+          The whole app in your language, with light and dark to match your phone.</div>
+      </div>
+    </div>
+    <div>
+      <h2>In your language.</h2>
+      <p>
+        English, Spanish and German throughout — dates and all. Tap the language
+        button and the app changes instantly.
+      </p>
+      <p>
+        Light and dark themes follow your phone, or pick one and it stays put.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<section class="close wrap">
+  <p class="kicker">COSTA DEL SOL</p>
+  <h2>Stop checking. Start playing.</h2>
+  <p class="lede">
+    Every tee time between Sotogrande and Fuengirola, in one search,
+    for the price of a coffee.
+  </p>
+  <div class="cta-row">
+    <a class="btn" href="#">Get it on Google Play</a>
+  </div>
+</section>
+
+<footer class="wrap">
+  <p>
+    <a href="/privacy">Privacy</a> · <a href="/credits">Image credits</a>
+  </p>
+  <p class="disclaim">
+    Tee Timer is an independent app. It is not affiliated with, endorsed by or
+    operated by any of the golf clubs whose published prices it displays, and it
+    is not a booking agent — every reservation is made with the club, on the
+    club's own site, at the club's own price. Course photographs are the clubs'
+    own and remain their copyright; see the
+    <a href="/credits">image credits</a>. Prices and availability shown in the
+    screenshots were live at the time they were taken and change constantly.
+  </p>
+</footer>
+
+</body>
+</html>
