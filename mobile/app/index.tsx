@@ -270,7 +270,11 @@ export default function Home() {
             accessibilityRole="button"
             accessibilityLabel={t(themeName === 'dark' ? 'a11y.toLight' : 'a11y.toDark')}
           >
-            <Text style={s.iconGlyph}>{themeName === 'dark' ? '☀' : '☾'}</Text>
+            {/* U+263C, not U+2600: the latter has an emoji presentation and
+                both platforms drew it as a bright orange sticker, ignoring the
+                muted colour. This one has no emoji form, so it takes the text
+                colour and matches the moon. */}
+            <Text style={s.iconGlyph}>{themeName === 'dark' ? '☼' : '☾'}</Text>
           </Pressable>
         </View>
       </View>
@@ -436,7 +440,10 @@ export default function Home() {
                   accessibilityState={{ selected: view === v }}
                   accessibilityLabel={t(v === 'cards' ? 'a11y.cardsView' : 'a11y.tableView')}
                 >
-                  <Text style={[s.toggleText, view === v && s.toggleTextOn]}>
+                  <Text
+                    style={[s.toggleText, view === v && s.toggleTextOn]}
+                    numberOfLines={1}
+                  >
                     {v === 'cards' ? `▦  ${t('view.cards')}` : `☰  ${t('view.table')}`}
                   </Text>
                 </Pressable>
@@ -597,7 +604,17 @@ function Segmented({
             accessibilityRole="button"
             accessibilityState={{ selected: on }}
           >
-            <Text style={[s.segText, on && s.segTextOn]}>{o.label}</Text>
+            {/* German runs long — "Nachmittag", "Startzeiten" — and four of
+                them across a phone wrapped onto a second line, which threw the
+                row's height out. Shrink to fit rather than wrap or truncate. */}
+            <Text
+              style={[s.segText, on && s.segTextOn]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.75}
+            >
+              {o.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -656,10 +673,12 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   },
   segItem: {
     flex: 1,
+    minWidth: 0,
     paddingVertical: 9,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     borderRadius: theme.radius.pill,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   segItemOn: { backgroundColor: c.surfaceHi },
   segText: { ...theme.font.label, color: c.muted },
