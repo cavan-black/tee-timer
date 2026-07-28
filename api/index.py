@@ -31,6 +31,12 @@ _images_file = ROOT / "assets" / "course_images.json"
 if _images_file.exists():
     IMAGES = json.loads(_images_file.read_text(encoding="utf-8"))
 
+# Clubhouse numbers, for golfers who would rather sort a tee time by voice.
+PHONES: dict[str, str] = {}
+_phones_file = ROOT / "assets" / "course_phones.json"
+if _phones_file.exists():
+    PHONES = json.loads(_phones_file.read_text(encoding="utf-8"))
+
 app = FastAPI(title="Tee Timer API", version="1.0.0")
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 app.add_middleware(
@@ -95,6 +101,7 @@ def course_json(c) -> dict:
         "corridor": c.corridor,
         "platform": c.platform,
         "image": IMAGES.get(c.tenant),
+        "phone": PHONES.get(c.tenant),
     }
 
 
@@ -205,6 +212,7 @@ def search(
                 "label": t.course.label,
                 "area": t.course.area,
                 "image": IMAGES.get(t.course.tenant),
+                "phone": PHONES.get(t.course.tenant),
                 "time": t.tee_off.strftime("%H:%M"),
                 "price": round(t.price, 2),
                 "rackPrice": t.rack_price,

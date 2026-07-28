@@ -145,12 +145,28 @@ export default function CourseScreen() {
       </ScrollView>
 
       <View style={[s.dock, { paddingBottom: insets.bottom + theme.space(3) }]}>
-        <Pressable
-          onPress={() => open(head.bookingUrl)}
-          style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
-        >
-          <Text style={s.ctaText}>Book at {head.club}</Text>
-        </Pressable>
+        <View style={s.dockRow}>
+          <Pressable
+            onPress={() => open(head.bookingUrl)}
+            style={({ pressed }) => [s.cta, pressed && { opacity: 0.85 }]}
+            accessibilityRole="button"
+            accessibilityLabel={`Book online at ${head.club}`}
+          >
+            <Text style={s.ctaText}>Book online</Text>
+          </Pressable>
+          {/* Some tee sheets are easier sorted by voice, and not every club
+              publishes a number — so this only appears when we have one. */}
+          {head.phone && (
+            <Pressable
+              onPress={() => open(`tel:${head.phone!.replace(/\s/g, '')}`)}
+              style={({ pressed }) => [s.callButton, pressed && { opacity: 0.85 }]}
+              accessibilityRole="button"
+              accessibilityLabel={`Call ${head.club} on ${head.phone}`}
+            >
+              <Text style={s.callText}>Call</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -209,11 +225,22 @@ const makeStyles = (c: Palette) => StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: c.line,
   },
+  dockRow: { flexDirection: 'row', gap: theme.space(2) },
   cta: {
+    flex: 1,
     backgroundColor: c.accent,
     borderRadius: theme.radius.pill,
     paddingVertical: 15,
     alignItems: 'center',
   },
   ctaText: { ...theme.font.title, color: c.accentInk },
+  callButton: {
+    paddingVertical: 15,
+    paddingHorizontal: theme.space(7),
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    borderColor: c.lineStrong,
+    alignItems: 'center',
+  },
+  callText: { ...theme.font.title, color: c.text },
 });

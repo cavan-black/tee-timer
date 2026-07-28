@@ -15,6 +15,7 @@ function tee(over: Partial<TeeTime>): TeeTime {
     label: 'Club',
     area: 'Marbella',
     image: null,
+    phone: null,
     time: '09:00',
     price: 50,
     rackPrice: null,

@@ -27,6 +27,7 @@ export interface Course {
   corridor: boolean;
   platform: string;
   image: string | null;
+  phone: string | null;
 }
 
 export interface TeeTime {
@@ -36,6 +37,7 @@ export interface TeeTime {
   label: string;
   area: string;
   image: string | null;
+  phone: string | null;
   time: string;
   price: number;
   rackPrice: number | null;
