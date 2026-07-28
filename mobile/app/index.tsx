@@ -34,7 +34,6 @@ import { fill, theme, useTheme, type Palette } from '../src/theme';
 
 const CARD_H = 208;
 const CARD_GAP = theme.space(3);
-const SNAP = CARD_H + CARD_GAP;
 
 const WINDOWS: { key: Window; label: string }[] = [
   { key: 'any', label: 'Any time' },
@@ -499,13 +498,11 @@ export default function Home() {
         ListEmptyComponent={empty}
         contentContainerStyle={pad}
         refreshControl={refresh}
-        // Snap so the deck settles on a card rather than mid-photo.
-        snapToInterval={SNAP}
-        snapToAlignment="start"
-        decelerationRate="fast"
-        disableIntervalMomentum
+        // Deliberately not snapping. Snap-to-card looked tidy but capped each
+        // swipe at one card and killed the fling, so the list felt stuck.
         initialNumToRender={4}
         windowSize={7}
+        removeClippedSubviews={false}
       />
     </View>
   );
