@@ -162,6 +162,55 @@ def screen(name: str):
     )
 
 
+APP_DIR = ROOT / "web" / "app"
+# Everything the Expo web export emits, so a wrong guess 404s rather than
+# being served with the wrong type.
+MEDIA = {
+    ".html": "text/html; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".ico": "image/x-icon",
+    ".svg": "image/svg+xml",
+    ".ttf": "font/ttf",
+    ".woff2": "font/woff2",
+    ".map": "application/json",
+}
+
+
+@app.get("/app")
+@app.get("/app/{path:path}")
+def web_app(path: str = ""):
+    """The app itself, running in a browser.
+
+    Same code as the phone build -- React Native Web -- so anyone can be sent a
+    link and use it without installing anything.
+    """
+    target = (APP_DIR / path).resolve() if path else APP_DIR / "index.html"
+    # Never let a crafted path climb out of the export directory.
+    if not str(target).startswith(str(APP_DIR.resolve())):
+        raise HTTPException(status_code=400, detail="bad path")
+
+    if not target.is_file():
+        # expo-router does its own routing, so any unknown path is a deep link
+        # into the single page rather than a missing file.
+        target = APP_DIR / "index.html"
+
+    suffix = target.suffix.lower()
+    if suffix not in MEDIA:
+        raise HTTPException(status_code=404, detail="not found")
+
+    # The bundle and assets carry a content hash in the filename, so they can be
+    # cached hard. index.html must not be, or a new build never reaches anyone.
+    immutable = suffix != ".html" and ("_expo/" in path or "/assets/" in path)
+    cache = ("public, max-age=31536000, immutable" if immutable
+             else "public, max-age=0, s-maxage=300, stale-while-revalidate=86400")
+    return FileResponse(target, media_type=MEDIA[suffix],
+                        headers={"Cache-Control": cache})
+
+
 @app.get("/privacy")
 def privacy():
     """Google Play requires a privacy policy at a public URL, and it has to

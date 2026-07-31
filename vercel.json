@@ -7,10 +7,33 @@
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/privacy", "destination": "/api/index" },
-    { "source": "/credits", "destination": "/api/index" },
-    { "source": "/screens/(.*)", "destination": "/api/index" },
-    { "source": "/", "destination": "/api/index" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/privacy",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/credits",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/screens/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/app",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/app/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/",
+      "destination": "/api/index"
+    }
   ]
 }
