@@ -43,6 +43,24 @@ export interface Group {
   earliest: string;
 }
 
+/**
+ * Does this rate come with a buggy?
+ *
+ * Clubs are inconsistent about where they say so: 694 rows on a sample day
+ * declare it in `includes`, but 839 mention it only in the rate name, so both
+ * have to be read.
+ *
+ * Deliberately not matching "carro" or "carrito" — in Spanish those are a pull
+ * trolley, not a motorised buggy, and flagging one as the other would promise
+ * something the green fee does not include. `\bcart\b` is safe for the same
+ * reason: the word boundary keeps it off "carrito".
+ */
+const BUGGY = /\bbugg(y|ies)\b|\bcarts?\b/i;
+
+export function includesBuggy(t: Pick<TeeTime, 'rate' | 'includes'>): boolean {
+  return BUGGY.test(t.rate) || t.includes.some((i) => BUGGY.test(i));
+}
+
 /** One entry per course, cheapest first — the card deck. */
 export function groupByCourse(times: TeeTime[]): Group[] {
   const map = new Map<string, TeeTime[]>();

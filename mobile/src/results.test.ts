@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { dedupeSlots, groupByCourse, rankProblems, sortTeeTimes } from './results.ts';
+import { dedupeSlots, groupByCourse, includesBuggy, rankProblems, sortTeeTimes } from './results.ts';
 import type { TeeTime } from './api.ts';
 
 function tee(over: Partial<TeeTime>): TeeTime {
@@ -133,4 +133,19 @@ test('a card counts playable slots, not rate rows', () => {
   ]);
   assert.equal(group.count, 2);
   assert.equal(group.from, 52);
+});
+
+test('spots a buggy whether the club says so in the rate or in includes', () => {
+  assert.equal(includesBuggy({ rate: 'GF 18 HOYOS BUGGY INCL.', includes: [] }), true);
+  assert.equal(includesBuggy({ rate: 'Green fee', includes: ['Buggy'] }), true);
+  assert.equal(includesBuggy({ rate: '2 Green Fees + 1 Buggy', includes: [] }), true);
+  assert.equal(includesBuggy({ rate: 'Golf cart included', includes: [] }), true);
+  assert.equal(includesBuggy({ rate: 'Green Fee (18 holes)', includes: ['GPS'] }), false);
+});
+
+test('a pull trolley is not a buggy', () => {
+  // "carrito"/"carro" is a hand trolley in Spanish. Flagging it as a buggy
+  // would promise a motorised cart the green fee does not include.
+  assert.equal(includesBuggy({ rate: 'Green fee + carrito', includes: [] }), false);
+  assert.equal(includesBuggy({ rate: 'GF con carro', includes: [] }), false);
 });

@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { imageUrl, type TeeTime } from './api';
 import { GeneratedCourse } from './courseart';
 import { useI18n } from './i18n';
+import { includesBuggy } from './results';
 import { palettes, theme, useTheme, type Palette } from './theme';
 
 /**
@@ -121,6 +122,9 @@ export function TeeTimeRow({ t, onPress }: { t: TeeTime; onPress: () => void }) 
           <Chip label={`${t.holes}h`} />
           <Chip label={tr('spaces', { count: t.spaces })} />
           {!!t.altRates && <Chip label={tr('rates.more', { count: t.altRates })} tone="deal" />}
+          {includesBuggy(t) && !t.includes.some((i) => /bugg/i.test(i)) && (
+            <Chip label={tr('incl.buggy')} tone="accent" />
+          )}
           {t.includes.slice(0, 2).map((x) => (
             <Chip key={x} label={x} tone="accent" />
           ))}
@@ -142,7 +146,9 @@ export function TableRow({
   showCourse?: boolean;
 }) {
   const { colors: c } = useTheme();
+  const { t: tr } = useI18n();
   const s = useStyles(c);
+  const buggy = includesBuggy(t);
   return (
     <Pressable
       onPress={onPress}
@@ -158,6 +164,7 @@ export function TableRow({
           </Text>
         )}
         <Text style={s.tRate} numberOfLines={1}>
+          {buggy && <Text style={{ color: c.accent }}>{`${tr('incl.buggy')} · `}</Text>}
           {t.rate}
           {!!t.altRates && <Text style={{ color: c.deal }}>{`  +${t.altRates}`}</Text>}
         </Text>

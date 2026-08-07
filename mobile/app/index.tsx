@@ -29,7 +29,7 @@ import {
 import { Chip, CourseArt, Empty, Price, TableHead, TableRow } from '../src/components';
 import { useI18n, type I18nState } from '../src/i18n';
 import { LanguageButton } from '../src/language';
-import { groupByCourse, rankProblems, sortTeeTimes, type Group, type SortBy } from '../src/results';
+import { groupByCourse, includesBuggy, rankProblems, sortTeeTimes, type Group, type SortBy } from '../src/results';
 import { SearchProgress, SkeletonCards, SkeletonRows } from '../src/skeleton';
 import { remember } from '../src/store';
 import { Tutorial, useTutorial } from '../src/tutorial';
@@ -562,6 +562,7 @@ function CourseCard({ group, onPress }: { group: Group; onPress: () => void }) {
             <Chip label={t('card.times', { count })} />
             <Chip label={t('card.from', { time: head.time })} />
             <Chip label={`${head.holes}h`} />
+            {includesBuggy(head) && <Chip label={t('incl.buggy')} tone="accent" />}
           </View>
         </View>
         <Price value={from} rack={head.rackPrice} off={head.discountPct} big onImage />
