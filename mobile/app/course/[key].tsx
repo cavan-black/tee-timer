@@ -24,6 +24,7 @@ import {
 } from '../../src/api';
 import { Chip, CourseArt, Empty, TeeTimeRow } from '../../src/components';
 import { useI18n } from '../../src/i18n';
+import { dedupeSlots } from '../../src/results';
 import { recall } from '../../src/store';
 import { fill, theme, useTheme, type Palette } from '../../src/theme';
 
@@ -71,7 +72,8 @@ export default function CourseScreen() {
   }, [key, date, window, players, holes]);
 
   const times = React.useMemo(
-    () => (result?.teeTimes ?? []).filter((t) => t.courseKey === key),
+    () => dedupeSlots((result?.teeTimes ?? []).filter((t) => t.courseKey === key))
+      .sort((a, b) => a.time.localeCompare(b.time)),
     [result, key],
   );
   const head: TeeTime | undefined = times[0];

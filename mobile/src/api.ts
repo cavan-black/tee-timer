@@ -50,6 +50,8 @@ export interface TeeTime {
   spaces: number;
   includes: string[];
   bookingUrl: string;
+  /** Other rates the club sells for this same slot, collapsed into this row. */
+  altRates?: number;
 }
 
 export interface SearchResult {

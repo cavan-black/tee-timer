@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { groupByCourse, rankProblems, sortTeeTimes } from './results.ts';
+import { dedupeSlots, groupByCourse, rankProblems, sortTeeTimes } from './results.ts';
 import type { TeeTime } from './api.ts';
 
 function tee(over: Partial<TeeTime>): TeeTime {
@@ -52,10 +52,12 @@ test('a card shows the cheapest price but the earliest tee time', () => {
 });
 
 test('sorts by time or price, breaking ties on the other axis', () => {
+  // Different courses: two clubs can share an 08:00, and that is a real tie
+  // rather than one slot listed twice.
   const times = [
-    tee({ time: '10:00', price: 80 }),
-    tee({ time: '08:00', price: 120 }),
-    tee({ time: '08:00', price: 60 }),
+    tee({ courseKey: 'a', time: '10:00', price: 80 }),
+    tee({ courseKey: 'b', time: '08:00', price: 120 }),
+    tee({ courseKey: 'c', time: '08:00', price: 60 }),
   ];
   assert.deepEqual(
     sortTeeTimes(times, 'time').map((t) => [t.time, t.price]),
@@ -86,4 +88,49 @@ test('real failures rank above merely-empty courses', () => {
 test('an empty result set groups to nothing rather than throwing', () => {
   assert.deepEqual(groupByCourse([]), []);
   assert.deepEqual(sortTeeTimes([], 'price'), []);
+});
+
+test('a slot sold as several rates collapses to the cheapest', () => {
+  // Villa Padierna really does sell 08:00 three ways: green fee, green fee with
+  // a buggy, and a four-for-three offer. Only one of them can be booked.
+  const rows = dedupeSlots([
+    tee({ time: '08:00', price: 74.5, rate: '2 Green Fees + 1 Buggy' }),
+    tee({ time: '08:00', price: 52, rate: 'Green Fee (18 holes)' }),
+    tee({ time: '08:00', price: 246, rate: 'OFFER 4x3 w/ 2 buggies' }),
+    tee({ time: '08:10', price: 52, rate: 'Green Fee (18 holes)' }),
+  ]);
+  assert.equal(rows.length, 2);
+  const eight = rows.find((r) => r.time === '08:00')!;
+  assert.equal(eight.price, 52);
+  assert.equal(eight.altRates, 2);
+  // A slot sold one way carries no marker at all.
+  assert.equal(rows.find((r) => r.time === '08:10')!.altRates, undefined);
+});
+
+test('the same time at different courses is not a duplicate', () => {
+  const rows = dedupeSlots([
+    tee({ courseKey: 'a', time: '08:00', price: 52 }),
+    tee({ courseKey: 'b', time: '08:00', price: 90 }),
+  ]);
+  assert.equal(rows.length, 2);
+});
+
+test('the table shows one row per slot', () => {
+  const rows = sortTeeTimes([
+    tee({ time: '09:00', price: 80, rate: 'GF' }),
+    tee({ time: '09:00', price: 120, rate: 'GF + buggy' }),
+    tee({ time: '07:00', price: 60, rate: 'GF' }),
+  ], 'time');
+  assert.deepEqual(rows.map((r) => [r.time, r.price]), [['07:00', 60], ['09:00', 80]]);
+});
+
+test('a card counts playable slots, not rate rows', () => {
+  // Three rows, two slots -- the card must not claim three tee times.
+  const [group] = groupByCourse([
+    tee({ courseKey: 'a', time: '08:00', price: 52 }),
+    tee({ courseKey: 'a', time: '08:00', price: 74.5 }),
+    tee({ courseKey: 'a', time: '08:10', price: 52 }),
+  ]);
+  assert.equal(group.count, 2);
+  assert.equal(group.from, 52);
 });

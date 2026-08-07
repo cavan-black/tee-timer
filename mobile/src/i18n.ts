@@ -81,6 +81,8 @@ const en: Dict = {
   'table.course': 'COURSE',
   'table.max': 'MAX',
   'table.price': 'PRICE',
+  'rates.more_one': '+{count} rate',
+  'rates.more_other': '+{count} rates',
   'spaces_one': '{count} space',
   'spaces_other': '{count} spaces',
 
@@ -189,6 +191,8 @@ const es: Dict = {
   'table.course': 'CAMPO',
   'table.max': 'MÁX',
   'table.price': 'PRECIO',
+  'rates.more_one': '+{count} tarifa',
+  'rates.more_other': '+{count} tarifas',
   'spaces_one': '{count} plaza',
   'spaces_other': '{count} plazas',
 
@@ -299,6 +303,8 @@ const de: Dict = {
   'table.course': 'PLATZ',
   'table.max': 'MAX',
   'table.price': 'PREIS',
+  'rates.more_one': '+{count} Tarif',
+  'rates.more_other': '+{count} Tarife',
   'spaces_one': '{count} Platz frei',
   'spaces_other': '{count} Plätze frei',
 

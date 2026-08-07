@@ -120,6 +120,7 @@ export function TeeTimeRow({ t, onPress }: { t: TeeTime; onPress: () => void }) 
         <View style={s.metaRow}>
           <Chip label={`${t.holes}h`} />
           <Chip label={tr('spaces', { count: t.spaces })} />
+          {!!t.altRates && <Chip label={tr('rates.more', { count: t.altRates })} tone="deal" />}
           {t.includes.slice(0, 2).map((x) => (
             <Chip key={x} label={x} tone="accent" />
           ))}
@@ -158,6 +159,7 @@ export function TableRow({
         )}
         <Text style={s.tRate} numberOfLines={1}>
           {t.rate}
+          {!!t.altRates && <Text style={{ color: c.deal }}>{`  +${t.altRates}`}</Text>}
         </Text>
       </View>
       <Text style={s.tSpaces}>{t.spaces}p</Text>
