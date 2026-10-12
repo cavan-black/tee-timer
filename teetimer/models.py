@@ -67,8 +67,16 @@ class CourseResult:
     note: str | None = None
 
 
-_NINE = re.compile(r"\b(9\s*(h|holes?|hoyos|löcher|trous)?|nine|twilight\s*9)\b", re.I)
-_EIGHTEEN = re.compile(r"\b(18\s*(h|holes?|hoyos)?|eighteen)\b", re.I)
+# A plain \b would not do here. Clubs glue the hole count to the product code
+# ("GF09 Online", "GF18H online FC") and the Algarve writes nine with a leading
+# zero ("GF 09 Internet", "26 GF Jnr 09 Holes"); in both cases there is no word
+# boundary before the digits, so those rates fell through to the course's own
+# hole count and a nine-hole green fee was priced as eighteen. What must not
+# precede the count is another digit, which is what rules out 2026 and 2019.
+_NINE = re.compile(r"(?<![\d:.])0?9\s*(?:h|holes?|hoyos|löcher|trous)?\b|\bnine\b", re.I)
+_EIGHTEEN = re.compile(
+    r"(?<![\d:.])18\s*(?:h|holes?|hoyos|löcher|trous)?\b|\beighteen\b", re.I
+)
 
 
 _CLOCK = re.compile(r"\b\d{1,2}[:.]\d{2}\b")

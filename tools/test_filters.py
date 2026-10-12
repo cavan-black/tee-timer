@@ -24,6 +24,15 @@ CASES = [
     ("Promo 1 · time band 09:00–10:50", 18, 18),
     ("Twilight · time band 14:00–18:00", 18, 18),
     ("Early Bird · time band 9:00–9:50", 18, 18),
+    # Algarve spellings: a leading zero, and the count glued to the code.
+    ("GF 09 Internet", 18, 9), ("GF 09 holes online", 18, 9),
+    ("GF 09H online FC", 18, 9), ("GF09 Online", 18, 9),
+    ("26 GF Jnr 09 Holes – Online", 18, 9),
+    ("GF18 Twilight", 18, 18), ("GF 18H online OC", 18, 18),
+    ("OCEAN | Web | 09 holes", 9, 9), ("QS - Junior Web (9h)", 18, 9),
+    ("GF Direct Old Course", 18, 18),
+    # A year in the rate name is not a hole count.
+    ("Green fee 2026 season", 18, 18), ("Tarifa 2019", 18, 18),
 ]
 
 failed = 0
