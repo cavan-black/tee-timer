@@ -20,11 +20,28 @@ const CACHE_PREFIX = 'teetimer:v1:';
 export type Window = 'any' | 'morning' | 'afternoon' | 'twilight';
 export type Holes = '9' | '18' | 'both';
 
+/** A coast, as the slug the API filters by — "costa-del-sol", "algarve". */
+export type RegionKey = string;
+
+export interface Region {
+  key: RegionKey;
+  /** Proper noun — "Costa del Sol", "Algarve" — so it is not translated. */
+  name: string;
+  /** Areas within this coast, already ordered west to east. */
+  areas: string[];
+}
+
+/** What to search before /api/courses has answered. The server defaults to the
+ *  same slug, so a request sent in that window is not a guess. */
+export const DEFAULT_REGION: RegionKey = 'costa-del-sol';
+
 export interface Course {
   key: string;
   club: string;
   course: string;
   label: string;
+  /** The coast's display name, not its slug — compare against `Region.name`. */
+  region: string;
   area: string;
   holes: number;
   corridor: boolean;
@@ -56,6 +73,7 @@ export interface TeeTime {
 
 export interface SearchResult {
   date: string;
+  region: RegionKey;
   window: Window;
   players: number;
   holes: Holes;
@@ -69,6 +87,7 @@ export interface SearchResult {
 
 export interface SearchParams {
   date: string;
+  region: RegionKey;
   window: Window;
   players: number;
   holes: Holes;
@@ -134,20 +153,37 @@ async function request<T>(path: string, signal?: AbortSignal): Promise<T> {
 }
 
 function key(p: SearchParams): string {
-  return `${CACHE_PREFIX}${p.date}|${p.window}|${p.players}|${p.holes}|${
+  return `${CACHE_PREFIX}${p.region}|${p.date}|${p.window}|${p.players}|${p.holes}|${
     (p.areas ?? []).join('~')
   }|${p.inland ? 1 : 0}`;
 }
 
-export async function fetchCourses(): Promise<{ areas: string[]; courses: Course[] }> {
-  const cacheKey = `${CACHE_PREFIX}courses`;
+/**
+ * Never hand back a payload the screen cannot render.
+ *
+ * An API older than the app answers without `regions` at all, which is a real
+ * state and not a rare one: the app and the API deploy separately, and a phone
+ * updates when the store says so. Coercing the shape here means the worst case
+ * is a missing region tab, not a white screen.
+ */
+function asCourses(raw: any): { regions: Region[]; courses: Course[] } {
+  return {
+    regions: Array.isArray(raw?.regions) ? raw.regions : [],
+    courses: Array.isArray(raw?.courses) ? raw.courses : [],
+  };
+}
+
+export async function fetchCourses(): Promise<{ regions: Region[]; courses: Course[] }> {
+  // v2: the payload gained regions and lost the flat `areas` list, so a cache
+  // written by an older build would come back missing both.
+  const cacheKey = `${CACHE_PREFIX}courses:v2`;
   try {
-    const data = await request<{ areas: string[]; courses: Course[] }>('/api/courses');
+    const data = asCourses(await request<unknown>('/api/courses'));
     await AsyncStorage.setItem(cacheKey, JSON.stringify(data));
     return data;
   } catch (err) {
     const cached = await AsyncStorage.getItem(cacheKey);
-    if (cached) return JSON.parse(cached);
+    if (cached) return asCourses(JSON.parse(cached));
     throw err;
   }
 }
@@ -155,6 +191,7 @@ export async function fetchCourses(): Promise<{ areas: string[]; courses: Course
 export async function search(p: SearchParams, signal?: AbortSignal): Promise<SearchResult> {
   const qs = new URLSearchParams({
     date: p.date,
+    region: p.region,
     window: p.window,
     players: String(p.players),
     holes: p.holes,

@@ -6,6 +6,13 @@ from dataclasses import dataclass, field
 from datetime import date, time
 
 
+# The coasts covered. A search runs against exactly one of them: they are 500km
+# apart, so a golfer in Vilamoura has no use for a price in Estepona, and
+# scraping both would double the load on the clubs for nothing.
+COSTA_DEL_SOL = "Costa del Sol"
+ALGARVE = "Algarve"
+
+
 @dataclass(frozen=True)
 class Course:
     """One bookable 18/9-hole route at a club."""
@@ -19,13 +26,21 @@ class Course:
     tenant: str = ""          # golfmanager subdomain / teeone slug
     resource_type: int | None = None   # golfmanager idResourceType
     resource: int | None = None        # golfmanager idResource
+    area_id: int | None = None         # golfmanager-hosted booking area
     route: str = ""                    # teeone idRec
+    region: str = COSTA_DEL_SOL        # which coast this club is on
     corridor: bool = True     # inside the Sotogrande -> Fuengirola corridor
     site: str = ""            # club website, used to harvest hero imagery
 
     @property
     def key(self) -> str:
-        return f"{self.platform}:{self.tenant}:{self.resource or self.route or '-'}"
+        # Both handles, because neither alone separates every route: Dom Pedro
+        # sells four courses off one resource type, La Cala three off one
+        # resource -- keyed on just one of them they would collapse together.
+        handle = "/".join(
+            str(x) for x in (self.resource_type, self.resource) if x is not None
+        )
+        return f"{self.platform}:{self.tenant}:{handle or self.route or '-'}"
 
     @property
     def label(self) -> str:

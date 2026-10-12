@@ -23,7 +23,7 @@ from fastapi.responses import FileResponse  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
 
-from teetimer import AREAS, COURSES, scrape  # noqa: E402
+from teetimer import AREAS_BY_REGION, COURSES, REGIONS, scrape  # noqa: E402
 from teetimer.models import is_restricted, rate_holes  # noqa: E402
 
 IMAGES: dict[str, str] = {}
@@ -90,12 +90,18 @@ def _cache_put(key: tuple, payload: dict) -> None:
             _cache.popitem(last=False)
 
 
+# Regions travel over the wire as slugs, so the app can keep a stable
+# identifier for the tab it is on while the display name stays translatable.
+REGION_SLUGS = {r.lower().replace(" ", "-"): r for r in REGIONS}
+
+
 def course_json(c) -> dict:
     return {
         "key": c.key,
         "club": c.club,
         "course": c.course,
         "label": c.label,
+        "region": c.region,
         "area": c.area,
         "holes": c.holes,
         "corridor": c.corridor,
@@ -230,6 +236,7 @@ def credits():
 def health() -> dict:
     return {"ok": True, "courses": len(COURSES),
             "clubs": len({c.club for c in COURSES}),
+            "regions": {r: sum(1 for c in COURSES if c.region == r) for r in REGIONS},
             "withImages": sum(1 for c in COURSES if IMAGES.get(c.tenant))}
 
 
@@ -238,7 +245,10 @@ def courses(response: Response) -> dict:
     # The registry only changes when a club switches booking platform.
     response.headers["Cache-Control"] = "public, s-maxage=3600, stale-while-revalidate=86400"
     return {
-        "areas": AREAS,
+        "regions": [
+            {"key": slug, "name": name, "areas": AREAS_BY_REGION[name]}
+            for slug, name in REGION_SLUGS.items()
+        ],
         "courses": [course_json(c) for c in COURSES],
     }
 
@@ -247,6 +257,9 @@ def courses(response: Response) -> dict:
 def search(
     response: Response,
     day: str = Query(..., alias="date", description="YYYY-MM-DD"),
+    region: str = Query(
+        "costa-del-sol", description="one of the slugs from /api/courses"
+    ),
     window: str = Query("any"),
     players: int = Query(1, ge=1, le=4),
     holes: str = Query("18", pattern="^(9|18|both)$"),
@@ -256,6 +269,9 @@ def search(
 ) -> dict:
     if window not in WINDOWS:
         raise HTTPException(400, f"window must be one of {sorted(WINDOWS)}")
+    wanted_region = REGION_SLUGS.get(region)
+    if wanted_region is None:
+        raise HTTPException(400, f"region must be one of {sorted(REGION_SLUGS)}")
     try:
         wanted = date.fromisoformat(day)
     except ValueError:
@@ -270,14 +286,16 @@ def search(
     response.headers["Cache-Control"] = (
         f"public, s-maxage={CACHE_TTL}, stale-while-revalidate={CACHE_TTL * 2}"
     )
-    key = (wanted, window, players, holes, areas or "", inland, restricted)
+    key = (wanted_region, wanted, window, players, holes, areas or "", inland, restricted)
     cached = _cache_get(key)
     if cached is not None:
         response.headers["X-Cache"] = "HIT"
         return cached
     response.headers["X-Cache"] = "MISS"
 
-    picked = [c for c in COURSES if c.corridor or inland]
+    # `inland` only means anything on the Costa del Sol, where a couple of
+    # clubs sit off the coastal corridor; every Algarve club is corridor=True.
+    picked = [c for c in COURSES if c.region == wanted_region and (c.corridor or inland)]
     if holes == "18":
         # 9-hole routes can't yield an 18-hole round; 18-hole sheets do sell
         # 9-hole fees, so only "18" narrows the course pool.
@@ -325,6 +343,7 @@ def search(
     tee_times.sort(key=lambda x: (x["time"], x["price"]))
     payload = {
         "date": wanted.isoformat(),
+        "region": region,
         "window": window,
         "players": players,
         "holes": holes,

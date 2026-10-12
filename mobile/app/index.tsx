@@ -1,4 +1,5 @@
 /** Search + results. Course cards you flick through, or a dense table. */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React from 'react';
@@ -17,11 +18,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   cachedSearch,
+  DEFAULT_REGION,
   fetchCourses,
   search,
   SearchCancelled,
   type Course,
   type Holes,
+  type Region,
+  type RegionKey,
   type SearchResult,
   type TeeTime,
   type Window,
@@ -49,6 +53,42 @@ const WINDOWS: Window[] = [
 const HOLES: Holes[] = ['18', '9', 'both'];
 
 type ViewMode = 'cards' | 'table';
+
+const REGION_KEY = 'teetimer:region';
+
+/**
+ * Which coast the app is on, remembered between launches.
+ *
+ * Most people play one coast, so asking again every launch would be a tax on
+ * the common case. The stored value is checked against what the API actually
+ * offers before it is trusted — a region could be withdrawn, and a search
+ * against a slug the server no longer knows just 400s.
+ */
+function useRegion(regions: Region[]) {
+  const [region, setRegion] = React.useState<RegionKey>(DEFAULT_REGION);
+  const [restored, setRestored] = React.useState(false);
+
+  React.useEffect(() => {
+    AsyncStorage.getItem(REGION_KEY)
+      .then((saved) => {
+        if (saved) setRegion(saved);
+      })
+      .catch(() => {})
+      .finally(() => setRestored(true));
+  }, []);
+
+  React.useEffect(() => {
+    if (!restored || !regions.length) return;
+    if (!regions.some((r) => r.key === region)) setRegion(regions[0].key);
+  }, [restored, regions, region]);
+
+  const choose = React.useCallback((next: RegionKey) => {
+    setRegion(next);
+    AsyncStorage.setItem(REGION_KEY, next).catch(() => {});
+  }, []);
+
+  return { region, choose };
+}
 
 function iso(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
@@ -93,8 +133,26 @@ export default function Home() {
   const [holes, setHoles] = React.useState<Holes>('18');
   const [players, setPlayers] = React.useState(2);
   const [areas, setAreas] = React.useState<string[]>([]);
-  const [allAreas, setAllAreas] = React.useState<string[]>([]);
+  const [regions, setRegions] = React.useState<Region[]>([]);
   const [allCourses, setAllCourses] = React.useState<Course[]>([]);
+  const { region, choose } = useRegion(regions);
+
+  const current = regions.find((r) => r.key === region);
+  // Before /api/courses lands there are no chips to show, and the title falls
+  // back to the app's own name rather than flashing the wrong coast.
+  const allAreas = current?.areas ?? [];
+  const regionName = current?.name ?? '';
+
+  /** Switching coast abandons the old coast's area chips — they name places
+   *  500km away and would otherwise filter the new search down to nothing. */
+  const chooseRegion = React.useCallback(
+    (next: RegionKey) => {
+      if (next === region) return;
+      choose(next);
+      setAreas([]);
+    },
+    [choose, region],
+  );
 
   const [view, setView] = React.useState<ViewMode>('cards');
   const [sortBy, setSortBy] = React.useState<SortBy>('time');
@@ -107,14 +165,14 @@ export default function Home() {
   const [showProblems, setShowProblems] = React.useState(false);
 
   const params = React.useMemo(
-    () => ({ date, window, players, holes, areas: areas.length ? areas : undefined }),
-    [date, window, players, holes, areas],
+    () => ({ date, region, window, players, holes, areas: areas.length ? areas : undefined }),
+    [date, region, window, players, holes, areas],
   );
 
   React.useEffect(() => {
     fetchCourses()
       .then((d) => {
-        setAllAreas(d.areas);
+        setRegions(d.regions);
         setAllCourses(d.courses);
       })
       .catch(() => {}); // area chips are a refinement; the search works without them
@@ -213,14 +271,15 @@ export default function Home() {
   // rather than just endured. Falls back to the full corridor before the
   // course list has loaded.
   const querying = React.useMemo(() => {
-    if (!allCourses.length) return 45;
+    if (!allCourses.length || !regionName) return 45;
     return allCourses.filter(
       (x) =>
+        x.region === regionName &&
         x.corridor &&
         (holes !== '18' || x.holes === 18) &&
         (areas.length === 0 || areas.includes(x.area)),
     ).length;
-  }, [allCourses, areas, holes]);
+  }, [allCourses, areas, holes, regionName]);
 
   const tap = (fn: () => void) => () => {
     Haptics.selectionAsync().catch(() => {});
@@ -231,7 +290,7 @@ export default function Home() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     router.push({
       pathname: '/course/[key]',
-      params: { key: courseKey, date, window, players: String(players), holes },
+      params: { key: courseKey, date, region, window, players: String(players), holes },
     });
   };
 
@@ -249,7 +308,7 @@ export default function Home() {
     <View style={{ paddingTop: insets.top + theme.space(3) }}>
       <View style={s.header}>
         <View style={{ flex: 1 }}>
-          <Text style={s.kicker}>{t('app.kicker')}</Text>
+          <Text style={s.kicker}>{regionName.toUpperCase() || ' '}</Text>
           <Text style={s.h1}>Tee Timer</Text>
         </View>
         <View style={s.headerButtons}>
@@ -278,6 +337,35 @@ export default function Home() {
           </Pressable>
         </View>
       </View>
+
+      {/* A coast, not a filter: searches run against one or the other, so this
+          sits above the date and reads as a tab rather than another chip. */}
+      {regions.length > 1 && (
+        <View style={s.regionBar} accessibilityRole="tablist">
+          {regions.map((r) => {
+            const on = r.key === region;
+            return (
+              <Pressable
+                key={r.key}
+                onPress={tap(() => chooseRegion(r.key))}
+                style={[s.regionTab, on && s.regionTabOn]}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={`${t('a11y.region')}: ${r.name}`}
+              >
+                <Text
+                  style={[s.regionTabText, on && s.regionTabTextOn]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                >
+                  {r.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <ScrollView
         horizontal
@@ -492,7 +580,7 @@ export default function Home() {
   if (view === 'table') {
     return (
       <View style={{ flex: 1, backgroundColor: c.bg }}>
-        <Tutorial visible={tutorial.visible} onClose={tutorial.close} />
+        <Tutorial visible={tutorial.visible} onClose={tutorial.close} kicker={regionName} />
         <FlatList
           data={rows}
           keyExtractor={(t, i) => `${t.courseKey}-${t.time}-${i}`}
@@ -514,7 +602,7 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
-      <Tutorial visible={tutorial.visible} onClose={tutorial.close} />
+      <Tutorial visible={tutorial.visible} onClose={tutorial.close} kicker={regionName} />
       <FlatList
         data={groups}
         keyExtractor={(g) => g.key}
@@ -648,6 +736,28 @@ const makeStyles = (c: Palette) => StyleSheet.create({
   iconGlyph: { fontSize: 17, color: c.muted },
   kicker: { ...theme.font.caption, color: c.accent, marginBottom: 4 },
   h1: { ...theme.font.display, color: c.text },
+
+  regionBar: {
+    flexDirection: 'row',
+    gap: theme.space(2),
+    paddingHorizontal: theme.space(5),
+    paddingBottom: theme.space(3),
+  },
+  regionTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: theme.radius.md,
+    backgroundColor: c.surface,
+    // The selected tab is marked with a weighted underline rather than a fill:
+    // a filled pill here competed with the Find tee times button below it.
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  regionTabOn: { backgroundColor: c.surfaceHi, borderBottomColor: c.accent },
+  regionTabText: { ...theme.font.label, color: c.muted },
+  regionTabTextOn: { color: c.text },
 
   strip: { paddingHorizontal: theme.space(5), gap: 8, paddingVertical: theme.space(1) },
   day: {

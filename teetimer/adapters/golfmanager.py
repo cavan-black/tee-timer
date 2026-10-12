@@ -104,9 +104,26 @@ HOSTED = "https://eu.golfmanager.com"
 _RID = re.compile(r'name="rid" content="([^"]+)"')
 
 
+def _hosted_filters(course: Course) -> dict[str, int]:
+    """Which slice of a tenant's sheet one course is.
+
+    The hosted engine nests three handles: an `area` (golf, academy, padel),
+    then within it either a `resourceType` (Quinta do Lago sells North, South
+    and Laranjal this way) or a `resource` (Vale do Lobo puts Ocean and Royal
+    on one type and splits them by tee). Clubs use whichever suits them, so
+    both are optional and only the ones a course actually sets are sent.
+    """
+    params: dict[str, int] = {"area": course.area_id if course.area_id is not None else 1}
+    if course.resource_type is not None:
+        params["resourceType"] = course.resource_type
+    if course.resource is not None:
+        params["resource"] = course.resource
+    return params
+
+
 def hosted_booking_url(course: Course, day: date) -> str:
-    area = course.resource_type if course.resource_type is not None else 1
-    return f"{HOSTED}/{course.tenant}/consumer/book?area={area}&date={fmt_date(day)}T00:00"
+    query = "&".join(f"{k}={v}" for k, v in _hosted_filters(course).items())
+    return f"{HOSTED}/{course.tenant}/consumer/book?{query}&date={fmt_date(day)}T00:00"
 
 
 def _hosted_session(tenant: str) -> requests.Session:
@@ -125,11 +142,10 @@ def _hosted_session(tenant: str) -> requests.Session:
 
 def fetch_hosted(course: Course, day: date, players: int = 1, **_) -> list[TeeTime]:
     session = _hosted_session(course.tenant)
-    area = course.resource_type if course.resource_type is not None else 1
     resp = session.get(
         f"{HOSTED}/{course.tenant}/consumer/availability.json",
-        params={"date": f"{fmt_date(day)}T00:00", "area": area,
-                "participants": max(1, players)},
+        params={"date": f"{fmt_date(day)}T00:00", "participants": max(1, players),
+                **_hosted_filters(course)},
         timeout=TIMEOUT,
     )
     resp.raise_for_status()

@@ -29,8 +29,8 @@ type Dict = Record<string, string>;
 
 const en: Dict = {
   // header + search
-  'app.kicker': 'COSTA DEL SOL',
   'a11y.help': 'How it works',
+  'a11y.region': 'Choose a coast',
   'a11y.toLight': 'Switch to light mode',
   'a11y.toDark': 'Switch to dark mode',
   'a11y.language': 'Change language',
@@ -114,8 +114,12 @@ const en: Dict = {
   // tutorial
   'tut.title': 'Every tee time on the coast',
   'tut.lede':
-    "Live prices from 38 clubs between Sotogrande and Fuengirola, read straight "
-    + "from each club's own booking system.",
+    "Live prices from 51 clubs on the Costa del Sol and in the Algarve, read "
+    + "straight from each club's own booking system.",
+  'tut.0.title': 'Pick your coast',
+  'tut.0.body':
+    'Costa del Sol or Algarve, at the top of the screen. A search covers one '
+    + 'coast at a time — they are 500km apart.',
   'tut.1.title': 'Pick a day and a time',
   'tut.1.body':
     'Choose a date, then Any time, Morning or Afternoon. Set how many of you are '
@@ -123,7 +127,7 @@ const en: Dict = {
   'tut.2.title': 'Narrow it down if you like',
   'tut.2.body':
     'The area chips limit the search to one stretch of coast — Marbella, Estepona, '
-    + 'Mijas. Fewer clubs also means a much faster search.',
+    + 'Vilamoura, Tavira. Fewer clubs also means a much faster search.',
   'tut.3.title': 'Tap Find tee times',
   'tut.3.body':
     "This reads every club's own booking system live, so the whole coast takes "
@@ -142,8 +146,8 @@ const en: Dict = {
 };
 
 const es: Dict = {
-  'app.kicker': 'COSTA DEL SOL',
   'a11y.help': 'Cómo funciona',
+  'a11y.region': 'Elige una costa',
   'a11y.toLight': 'Cambiar a modo claro',
   'a11y.toDark': 'Cambiar a modo oscuro',
   'a11y.language': 'Cambiar idioma',
@@ -225,16 +229,20 @@ const es: Dict = {
 
   'tut.title': 'Todas las salidas de la costa',
   'tut.lede':
-    'Precios en directo de 38 clubes entre Sotogrande y Fuengirola, leídos '
+    'Precios en directo de 51 clubes de la Costa del Sol y el Algarve, leídos '
     + 'directamente del sistema de reservas de cada club.',
+  'tut.0.title': 'Elige tu costa',
+  'tut.0.body':
+    'Costa del Sol o Algarve, arriba del todo. Cada búsqueda cubre una sola '
+    + 'costa: hay 500 km entre ellas.',
   'tut.1.title': 'Elige un día y una hora',
   'tut.1.body':
     'Elige la fecha y luego Cualquiera, Mañana o Tarde. Indica cuántos sois y si '
     + 'queréis 18 o 9 hoyos.',
   'tut.2.title': 'Afina si quieres',
   'tut.2.body':
-    'Las zonas limitan la búsqueda a un tramo de costa — Marbella, Estepona, Mijas. '
-    + 'Menos clubes también significa una búsqueda mucho más rápida.',
+    'Las zonas limitan la búsqueda a un tramo de costa — Marbella, Estepona, '
+    + 'Vilamoura, Tavira. Menos clubes también significa una búsqueda mucho más rápida.',
   'tut.3.title': 'Pulsa Buscar salidas',
   'tut.3.body':
     'Consultamos en directo el sistema de reservas de cada club, así que toda la '
@@ -253,8 +261,8 @@ const es: Dict = {
 };
 
 const de: Dict = {
-  'app.kicker': 'COSTA DEL SOL',
   'a11y.help': 'So funktioniert es',
+  'a11y.region': 'Küste wählen',
   'a11y.toLight': 'Zum hellen Modus wechseln',
   'a11y.toDark': 'Zum dunklen Modus wechseln',
   'a11y.language': 'Sprache ändern',
@@ -338,8 +346,12 @@ const de: Dict = {
 
   'tut.title': 'Alle Startzeiten der Küste',
   'tut.lede':
-    'Live-Preise von 38 Clubs zwischen Sotogrande und Fuengirola, direkt aus dem '
-    + 'Buchungssystem des jeweiligen Clubs.',
+    'Live-Preise von 51 Clubs an der Costa del Sol und in der Algarve, direkt aus '
+    + 'dem Buchungssystem des jeweiligen Clubs.',
+  'tut.0.title': 'Küste wählen',
+  'tut.0.body':
+    'Costa del Sol oder Algarve, ganz oben. Eine Suche deckt immer nur eine '
+    + 'Küste ab — sie liegen 500 km auseinander.',
   'tut.1.title': 'Tag und Uhrzeit wählen',
   'tut.1.body':
     'Wähle ein Datum und dann Egal, Vormittag oder Nachmittag. Lege fest, wie viele '
@@ -347,7 +359,8 @@ const de: Dict = {
   'tut.2.title': 'Bei Bedarf eingrenzen',
   'tut.2.body':
     'Die Gebiete beschränken die Suche auf einen Küstenabschnitt — Marbella, '
-    + 'Estepona, Mijas. Weniger Clubs bedeuten auch eine deutlich schnellere Suche.',
+    + 'Estepona, Vilamoura, Tavira. Weniger Clubs bedeuten auch eine deutlich '
+    + 'schnellere Suche.',
   'tut.3.title': 'Auf Startzeiten suchen tippen',
   'tut.3.body':
     'Das liest das Buchungssystem jedes Clubs live aus, daher dauert die ganze '

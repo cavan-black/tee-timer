@@ -1,10 +1,11 @@
 /**
  * First-run walkthrough.
  *
- * Two things are not obvious from the interface: that a search really is
- * reading ~45 clubs live and so takes a moment, and that tapping through ends
- * at the club's own booking page rather than booking anything here. Both are
- * worth saying once, plainly.
+ * Three things are not obvious from the interface: that the two coasts are
+ * searched separately, that a search really is reading dozens of clubs live
+ * and so takes a moment, and that tapping through ends at the club's own
+ * booking page rather than booking anything here. All worth saying once,
+ * plainly.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
@@ -15,12 +16,15 @@ import { theme, useTheme, type Palette } from './theme';
 
 const SEEN_KEY = 'teetimer:tutorialSeen';
 
-/** Copy lives in ./i18n; this is just the ordering and the bullet glyphs. */
+/** Copy lives in ./i18n; this is just the ordering and the bullet glyphs. The
+ *  keys keep their original numbers so translations stay put — only the glyphs
+ *  count the steps as they are shown. */
 const STEPS = [
-  { icon: '1', key: 'tut.1' },
-  { icon: '2', key: 'tut.2' },
-  { icon: '3', key: 'tut.3' },
-  { icon: '4', key: 'tut.4' },
+  { icon: '1', key: 'tut.0' },
+  { icon: '2', key: 'tut.1' },
+  { icon: '3', key: 'tut.2' },
+  { icon: '4', key: 'tut.3' },
+  { icon: '5', key: 'tut.4' },
   { icon: '→', key: 'tut.5' },
 ];
 
@@ -50,7 +54,16 @@ export function useTutorial() {
   return { visible, open, close };
 }
 
-export function Tutorial({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function Tutorial({
+  visible,
+  onClose,
+  kicker,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  /** The coast currently selected, so the sheet opens on the user's own. */
+  kicker: string;
+}) {
   const { colors: c } = useTheme();
   const { t } = useI18n();
   const s = React.useMemo(() => makeStyles(c), [c]);
@@ -60,7 +73,7 @@ export function Tutorial({ visible, onClose }: { visible: boolean; onClose: () =
       <View style={s.backdrop}>
         <View style={s.sheet}>
           <View style={s.grabber} />
-          <Text style={s.kicker}>{t('app.kicker')}</Text>
+          <Text style={s.kicker}>{kicker.toUpperCase()}</Text>
           <Text style={s.title}>{t('tut.title')}</Text>
           <Text style={s.lede}>{t('tut.lede')}</Text>
 

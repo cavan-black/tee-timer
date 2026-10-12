@@ -287,6 +287,18 @@ OVERRIDES: dict[str, str] = {
 # course map, the Ronda bridge, a Seve Ballesteros portrait, a screenshot of
 # the club's own website, a golfer mid-swing, and a valley panorama.
 REJECTED: set[str] = {
+    # Algarve, reviewed the same way: a spa treatment room, a World Golf Awards
+    # badge, a consumer-arbitration notice, a swing portrait against mountains
+    # the Algarve does not have, and a course shot buried under a logo and a
+    # marketing strapline.
+    "https://www.boavistaresort.pt/images/banner/005.jpg",
+    "https://www.onyriapalmares.com/wp-content/uploads/"
+    "RS2787_180704-SLT-GOLF-mb4_9359-1_final-scr.jpg",
+    "https://www.vilamouragolf.com/wp-content/uploads/2025/11/"
+    "portugals-best-golf-course-2025-winner.jpg",
+    "https://www.quintadaria.com/wp-content/uploads/2025/02/OpenGraph_Facebook.jpg",
+    "http://www.benamorgolf.com/upload/photologue/photos/banner_pt.png",
+
     "https://azatagolf.com/wp-content/uploads/2026/04/azata-golf-campo-imagen.png",
     "https://www.lareservaclubsotogrande.com/uploads_wp/uploads/2023/11/"
     "image-2018-12-13-4-e1708337767816.jpg",

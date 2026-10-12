@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import streamlit as st
 
-from teetimer import AREAS, COURSES, scrape
+from teetimer import AREAS_BY_REGION, COURSES, REGIONS, scrape
 from teetimer import homescreen, ui
 from teetimer.courses import BY_KEY
 from teetimer.models import is_restricted, rate_holes
@@ -96,12 +96,20 @@ with st.sidebar:
         help="These are listed by the booking engines but a visiting adult can't book them.")
 
     st.divider()
-    areas = st.multiselect("Areas", AREAS, default=[a for a in AREAS if "Inland" not in a])
-    include_inland = st.checkbox("Include inland courses (Alhaurín, Lauro)", value=False)
+    region = st.radio("Coast", REGIONS, horizontal=True, index=0)
+    region_areas = AREAS_BY_REGION[region]
+    areas = st.multiselect("Areas", region_areas,
+                           default=[a for a in region_areas if "Inland" not in a])
+    # Only the Costa del Sol has clubs off the coastal corridor.
+    include_inland = (
+        st.checkbox("Include inland courses (Alhaurín, Lauro)", value=False)
+        if any("Inland" in a for a in region_areas) else False
+    )
 
     pool = [
         c for c in COURSES
-        if c.area in areas
+        if c.region == region
+        and c.area in areas
         and (c.corridor or include_inland)
         # 9-hole routes can never yield an 18-hole round, but 18-hole tee
         # sheets do sell 9-hole fees -- so only "18" narrows the course pool.
@@ -123,7 +131,7 @@ homescreen.apply("Tee Timer")
 
 st.title("⛳ Tee Timer")
 st.caption("Live availability and prices, straight from each club's own booking "
-           "engine — across the Costa del Sol.")
+           "engine — across the Costa del Sol and the Algarve.")
 
 if go:
     st.session_state["query"] = (tuple(c.key for c in pool), day, window, players)
@@ -134,7 +142,9 @@ if go:
 query = st.session_state.get("query")
 if not query:
     st.info(f"Set a date and time of day in the sidebar, then hit **Find tee times**. "
-            f"{len(COURSES)} courses across {len(AREAS)} areas are covered.")
+            f"{len(COURSES)} courses are covered: "
+            + ", ".join(f"{sum(1 for c in COURSES if c.region == r)} on the {r}"
+                        for r in REGIONS) + ".")
     st.stop()
 
 keys, q_day, q_window, q_players = query

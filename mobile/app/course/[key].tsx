@@ -17,7 +17,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   API_BASE,
   cachedSearch,
+  DEFAULT_REGION,
   type Holes,
+  type RegionKey,
   type SearchResult,
   type TeeTime,
   type Window,
@@ -33,9 +35,10 @@ export default function CourseScreen() {
   const { colors: c } = useTheme();
   const { t, locale } = useI18n();
   const s = useStyles(c);
-  const { key, date, window, players, holes } = useLocalSearchParams<{
+  const { key, date, region, window, players, holes } = useLocalSearchParams<{
     key: string;
     date: string;
+    region?: RegionKey;
     window?: Window;
     players?: string;
     holes?: Holes;
@@ -58,6 +61,7 @@ export default function CourseScreen() {
     (async () => {
       const hit = await cachedSearch({
         date: date!,
+        region: (region ?? DEFAULT_REGION) as RegionKey,
         window: (window ?? 'any') as Window,
         players: Number(players ?? 1),
         holes: (holes ?? '18') as Holes,
@@ -69,7 +73,7 @@ export default function CourseScreen() {
     return () => {
       live = false;
     };
-  }, [key, date, window, players, holes]);
+  }, [key, date, region, window, players, holes]);
 
   const times = React.useMemo(
     () => dedupeSlots((result?.teeTimes ?? []).filter((t) => t.courseKey === key))

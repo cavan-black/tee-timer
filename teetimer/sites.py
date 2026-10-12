@@ -53,4 +53,25 @@ SITES: dict[str, str] = {
     # Inland
     "alhaurin": "https://www.alhauringolf.com",
     "lauro": "https://www.laurogolf.com",
+
+    # --- Algarve -----------------------------------------------------------
+    # Lagos / Sagres
+    "espiche": "https://www.espiche-golf.com",
+    "boavista": "https://www.boavistaresort.pt",
+    "palmares": "https://www.onyriapalmares.com",
+    # Portimão / Silves
+    "morgadoalamos": "https://www.nauhotels.com/en/nau-morgado-golf-country-club",
+    "amendoeira": "https://www.amendoeiraresort.com",
+    # Albufeira
+    "salgados": "https://www.nauhotels.com/en/nau-salgados-golf",
+    # Vilamoura
+    "dompedro": "https://www.vilamouragolf.com",
+    # Quinta do Lago / Almancil
+    "quintadolago": "https://www.quintadolago.com",
+    "valedolobo": "https://www.valedolobo.com",
+    # Tavira / Castro Marim
+    "monterei": "https://www.monte-rei.com",
+    "quintadaria": "https://www.quintadaria.com",
+    "benamor": "https://www.benamorgolf.com",
+    "castromarim": "https://www.castromaringolfe.pt",
 }

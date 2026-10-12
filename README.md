@@ -118,12 +118,23 @@ an existing shortcut has to be deleted and re-added to pick it up.
 
 ## Coverage
 
-38 clubs / 60 bookable routes across Sotogrande & San Roque, Casares, Estepona,
-Benahavís, San Pedro & Nueva Andalucía, Marbella and Mijas/Fuengirola, plus
-Alhaurín and Lauro just inland (off by default).
+51 clubs / 83 bookable routes, on two coasts. A search runs against one of
+them: they are 500km apart, and scraping both would double the load on the
+clubs for a result nobody can use.
 
-Known gaps — in the corridor but with no open availability feed: La Dama de
-Noche, Casares Costa and Monte Paraíso.
+**Costa del Sol** — 38 clubs / 60 routes across Sotogrande & San Roque,
+Casares, Estepona, Benahavís, San Pedro & Nueva Andalucía, Marbella and
+Mijas/Fuengirola, plus Alhaurín and Lauro just inland (off by default).
+
+**Algarve** — 13 clubs / 23 routes across Lagos & Sagres, Portimão & Silves,
+Albufeira, Vilamoura, Quinta do Lago & Almancil, and Tavira & Castro Marim.
+All of them are Golfmanager, split about evenly between its two front-ends.
+
+Known gaps — Costa del Sol, in the corridor but with no open availability
+feed: La Dama de Noche, Casares Costa and Monte Paraíso. Algarve: Penina, San
+Lorenzo, Vila Sol and Pinheiros Altos have an engine that answers but never
+publishes a visitor slot; Dom Pedro Victoria is sold through the resort rather
+than the tee sheet; Pestana's four courses are on a platform we don't read.
 
 Clubs change platform occasionally — Río Real left TeeOne, and Santa Clara
 Marbella and Granada share a name but not a tenant. Run
